@@ -470,7 +470,7 @@ const CalendarView = ({ groups, tasks, onEditGroup, onToggleTask, onAddTask, onD
               ) : (
                   <div style={{padding: isMobile ? '16px' : '20px 40px'}}>
                       {listData.length > 0 ? listData.map((item, idx) => {
-                          // 🔄 1. 这里加排序逻辑：未完成(0)在前，已完成(1)在后
+                          // 排序：未完成在前
                           const sortedTasks = [...item.data.tasks].sort((a, b) => Number(a.done) - Number(b.done));
                           
                           return (
@@ -479,7 +479,7 @@ const CalendarView = ({ groups, tasks, onEditGroup, onToggleTask, onAddTask, onD
                               marginBottom: 24, 
                               gap: isMobile ? 0 : 24
                           }}>
-                              {/* 左侧：日期显示 */}
+                              {/* 左侧：日期 */}
                               <div style={{
                                   width: isMobile ? '100%' : 80, 
                                   textAlign: isMobile ? 'left' : 'center', 
@@ -497,13 +497,13 @@ const CalendarView = ({ groups, tasks, onEditGroup, onToggleTask, onAddTask, onD
                                   {item.holiday && <Tag color="red" style={{marginLeft: isMobile ? 'auto' : 0, marginTop: isMobile ? 0 : 8}}>{item.holiday.name}</Tag>}
                               </div>
 
-                              {/* 右侧：内容区域 */}
+                              {/* 右侧：内容 */}
                               <div style={{
                                   flex: 1, 
                                   borderLeft: !isMobile ? (isDark ? '1px solid #333' : '1px solid #e8e8e8') : 'none', 
                                   paddingLeft: isMobile ? 0 : 24
                               }}>
-                                  {/* 显示当天的旅行团 */}
+                                  {/* 团队显示 */}
                                   {item.data.groups.map(g => (
                                       <div key={g.id} onClick={() => onEditGroup(g)} style={{padding: '12px', background: isDark ? '#1f1f1f' : '#f9f9f9', borderRadius: 8, borderLeft: `4px solid ${g.color}`, marginBottom: 8, cursor: 'pointer'}}>
                                           <div style={{fontWeight: 'bold', color: isDark ? '#fff' : '#333'}}>{g.name}</div>
@@ -511,56 +511,64 @@ const CalendarView = ({ groups, tasks, onEditGroup, onToggleTask, onAddTask, onD
                                       </div>
                                   ))}
 
-                                  {/* 显示当天的任务 (已排序) */}
+                                  {/* 任务显示 + 操作按钮 */}
                                   {sortedTasks.map(t => {
-                                      // 🔍 2. 查找关联团信息
                                       const linkedGroup = t.linkedInfo ? groups.find(g => g.id === t.linkedInfo.groupId) : null;
                                       
                                       return (
                                       <div key={t.id} style={{
                                           display: 'flex', 
-                                          alignItems: 'flex-start', // 改为顶部对齐，防止多行时错位
+                                          alignItems: 'flex-start',
                                           gap: 12, 
                                           marginBottom: 8, 
                                           padding: '8px 12px', 
                                           background: isDark ? '#1a1a1a' : '#fff', 
                                           borderRadius: 8, 
                                           border: isDark ? '1px solid #333' : '1px solid #f0f0f0', 
-                                          opacity: t.done ? 0.5 : 1, // 已完成变半透明
+                                          opacity: t.done ? 0.5 : 1, // 已完成半透明
                                           transition: 'all 0.3s'
                                       }}>
                                           <Checkbox checked={t.done} onChange={() => onToggleTask(t.id, t.done)} style={{marginTop: 3}} />
                                           
-                                          <div style={{flex: 1}}>
-                                              {/* 任务内容 */}
+                                          <div style={{flex: 1, minWidth: 0}}> {/* minWidth: 0 防止flex子项溢出 */}
                                               <div style={{
                                                   color: isDark ? '#ddd' : '#333', 
                                                   textDecoration: t.done ? 'line-through' : 'none', 
                                                   fontSize: 14,
-                                                  lineHeight: 1.5
+                                                  lineHeight: 1.5,
+                                                  wordBreak: 'break-all'
                                               }}>
                                                   {t.content}
                                               </div>
                                               
-                                              {/* 任务元数据 (优先级 + 关联团) */}
                                               <div style={{display: 'flex', gap: 8, marginTop: 4, alignItems: 'center', flexWrap: 'wrap'}}>
                                                   <Tag size="small" style={{fontSize:10, margin:0, padding: '0 4px', lineHeight: '16px'}} color={PRIORITY_CONFIG[t.category].color}>
                                                       {PRIORITY_CONFIG[t.category].label}
                                                   </Tag>
-                                                  
-                                                  {/* 🔗 显示关联团 */}
                                                   {linkedGroup && (
-                                                      <span style={{
-                                                          fontSize: 11, 
-                                                          color: isDark ? '#177ddc' : '#1890ff', 
-                                                          display: 'flex', 
-                                                          alignItems: 'center', 
-                                                          gap: 4
-                                                      }}>
+                                                      <span style={{fontSize: 11, color: isDark ? '#177ddc' : '#1890ff', display: 'flex', alignItems: 'center', gap: 4}}>
                                                           <RocketOutlined /> {linkedGroup.name}
                                                       </span>
                                                   )}
                                               </div>
+                                          </div>
+
+                                          {/* ✅ 新增：编辑和删除按钮区 */}
+                                          <div style={{display: 'flex', gap: 2, flexShrink: 0}}>
+                                              <Tooltip title="编辑">
+                                                  <Button type="text" size="small" icon={<EditOutlined style={{color: '#1890ff'}} />} onClick={() => onEditTask(t)} />
+                                              </Tooltip>
+                                              <Popconfirm 
+                                                  title="删除任务" 
+                                                  description="确定要删除这个任务吗？" 
+                                                  onConfirm={() => onDeleteTask(t.id)} 
+                                                  okText="删除" 
+                                                  cancelText="取消" 
+                                                  okButtonProps={{danger: true}}
+                                                  placement="topRight"
+                                              >
+                                                  <Button type="text" size="small" danger icon={<DeleteOutlined />} />
+                                              </Popconfirm>
                                           </div>
                                       </div>
                                   )})}
@@ -915,8 +923,16 @@ const CalendarView = ({ groups, tasks, onEditGroup, onToggleTask, onAddTask, onD
 // --- 主程序 (App) 修改版 ---
 const App = () => {
   const [activeTab, setActiveTab] = useState('calendar');
-  const [isDarkMode, setIsDarkMode] = useState(false);
-  
+  // ✅ 修改 1: 从 localStorage 读取初始值，如果没有则默认为 false (浅色)
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+      const saved = localStorage.getItem('travelCalTheme');
+      return saved === 'dark';
+  });
+  // ✅ 修改 2: 当 isDarkMode 变化时，保存到 localStorage
+  useEffect(() => {
+      localStorage.setItem('travelCalTheme', isDarkMode ? 'dark' : 'light');
+  }, [isDarkMode]);
+
   // 1. Session 状态
   const [session, setSession] = useState(null);
   const [groups, setGroups] = useState([]);
