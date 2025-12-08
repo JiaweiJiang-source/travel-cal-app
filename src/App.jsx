@@ -51,12 +51,8 @@ const COLOR_PALETTE = [
 const HOLIDAYS = {
   // --- 2025 长假 & 节日 ---
   '2025-01-01': { name: '元旦', country: 'CN' },
-  
-  // 澳洲国庆
   '2025-01-26': { name: 'Aus Day', country: 'AU' },
   '2025-01-27': { name: 'Aus Day (Obs)', country: 'AU' },
-
-  // 春节假期 (1.28 - 2.04)
   '2025-01-28': { name: '除夕', country: 'CN' },
   '2025-01-29': { name: '春节', country: 'CN' },
   '2025-01-30': { name: '初二', country: 'CN' },
@@ -65,34 +61,23 @@ const HOLIDAYS = {
   '2025-02-02': { name: '初五', country: 'CN' },
   '2025-02-03': { name: '初六', country: 'CN' },
   '2025-02-04': { name: '初七', country: 'CN' },
-
-  // 清明
   '2025-04-04': { name: '清明', country: 'CN' },
   '2025-04-05': { name: '假期', country: 'CN' },
   '2025-04-06': { name: '假期', country: 'CN' },
-
-  // 澳洲复活节
   '2025-04-18': { name: 'Good Fri', country: 'AU' },
   '2025-04-19': { name: 'Easter Sat', country: 'AU' },
   '2025-04-20': { name: 'Easter Sun', country: 'AU' },
   '2025-04-21': { name: 'Easter Mon', country: 'AU' },
   '2025-04-25': { name: 'Anzac Day', country: 'AU' },
-
-  // 劳动节
   '2025-05-01': { name: '劳动节', country: 'CN' },
   '2025-05-02': { name: '假期', country: 'CN' },
   '2025-05-03': { name: '假期', country: 'CN' },
   '2025-05-04': { name: '假期', country: 'CN' },
   '2025-05-05': { name: '假期', country: 'CN' },
-
-  // 端午
   '2025-05-31': { name: '端午', country: 'CN' },
   '2025-06-01': { name: '假期', country: 'CN' },
   '2025-06-02': { name: '假期', country: 'CN' },
-
   '2025-06-09': { name: 'King\'s Bday', country: 'AU' },
-
-  // 国庆 & 中秋 (10.1 - 10.8)
   '2025-10-01': { name: '国庆节', country: 'CN' },
   '2025-10-02': { name: '假期', country: 'CN' },
   '2025-10-03': { name: '假期', country: 'CN' },
@@ -101,14 +86,12 @@ const HOLIDAYS = {
   '2025-10-06': { name: '中秋节', country: 'CN' },
   '2025-10-07': { name: '假期', country: 'CN' },
   '2025-10-08': { name: '假期', country: 'CN' },
-
   '2025-12-25': { name: 'Christmas', country: 'AU' },
   '2025-12-26': { name: 'Boxing Day', country: 'AU' },
 
   // --- 2026 部分主要假期 ---
   '2026-01-01': { name: '元旦', country: 'CN' },
   '2026-01-26': { name: 'Aus Day', country: 'AU' },
-  // 2026春节
   '2026-02-16': { name: '除夕', country: 'CN' },
   '2026-02-17': { name: '春节', country: 'CN' },
   '2026-02-18': { name: '初二', country: 'CN' },
@@ -116,7 +99,6 @@ const HOLIDAYS = {
   '2026-02-20': { name: '初四', country: 'CN' },
   '2026-02-21': { name: '初五', country: 'CN' },
   '2026-02-22': { name: '初六', country: 'CN' },
-
   '2026-10-01': { name: '国庆节', country: 'CN' },
   '2026-12-25': { name: 'Christmas', country: 'AU' },
 };
@@ -174,7 +156,7 @@ const getStyles = (isDark) => ({
   })
 });
 
-// --- 提取 Sidebar 内容组件，供 Sider 和 Drawer 复用 ---
+// --- 提取 Sidebar 内容组件 ---
 const SidebarContent = ({ activeTab, setActiveTab, isDarkMode, setIsDarkMode, handleSignOut, groups, onGroupCreate, openEditGroup, closeDrawer }) => (
     <div style={{ padding: 16, height: '100%', display: 'flex', flexDirection: 'column' }}>
         <div style={{ height: 64, display: 'flex', alignItems: 'center', justifyContent: 'center', color: isDarkMode ? '#fff' : '#000', fontSize: 18, fontWeight: 'bold' }}>
@@ -309,7 +291,6 @@ const CalendarView = ({ groups, tasks, onEditGroup, onToggleTask, onAddTask, onD
       return list;
     }, [dataMap]);
   
-    // ✅ 核心修改：dateCellRender 渲染逻辑优化
     const dateCellRender = useCallback((value) => {
       const dateStr = value.format('YYYY-MM-DD');
       const dayData = dataMap[dateStr]; 
@@ -317,22 +298,14 @@ const CalendarView = ({ groups, tasks, onEditGroup, onToggleTask, onAddTask, onD
   
       return (
         <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
-          
-          {/* 1. 节日显示优化：自然排在顶部，样式更紧凑 */}
           {holiday && (
             <div style={{ marginBottom: 2, textAlign: 'center' }}>
                <Tag 
                   bordered={false} 
                   style={{
-                    margin: 0, 
-                    width: '100%', 
-                    padding: '0 2px',
-                    fontSize: 10,
-                    lineHeight: '18px',
-                    // 根据国家显示不同底色，AU用淡蓝，CN用淡红
+                    margin: 0, width: '100%', padding: '0 2px', fontSize: 10, lineHeight: '18px',
                     background: holiday.country === 'AU' ? 'rgba(0, 58, 140, 0.08)' : 'rgba(168, 7, 26, 0.08)',
-                    color: holiday.country === 'AU' ? '#003a8c' : '#a8071a',
-                    borderRadius: 4
+                    color: holiday.country === 'AU' ? '#003a8c' : '#a8071a', borderRadius: 4
                   }}
                >
                  <span style={{marginRight: 4}}>{holiday.country === 'AU' ? '🇦🇺' : '🇨🇳'}</span>
@@ -340,8 +313,6 @@ const CalendarView = ({ groups, tasks, onEditGroup, onToggleTask, onAddTask, onD
                </Tag>
             </div>
           )}
-
-          {/* 2. 团务和任务列表 */}
           {dayData && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 2, marginTop: holiday ? 2 : 4 }}>
               {dayData.groups.map(g => (
@@ -362,7 +333,6 @@ const CalendarView = ({ groups, tasks, onEditGroup, onToggleTask, onAddTask, onD
       );
     }, [dataMap, onEditGroup, styles, isDark]); 
   
-    // --- 下面的代码保持不变 ---
     const handleDrawerQuickAdd = () => {
       if (!newTaskContent.trim()) { message.warning('请输入任务内容'); return; }
       onAddTask({
@@ -452,14 +422,32 @@ const CalendarView = ({ groups, tasks, onEditGroup, onToggleTask, onAddTask, onD
               ) : (
                   <div style={{padding: isMobile ? '16px' : '20px 40px'}}>
                       {listData.length > 0 ? listData.map((item, idx) => (
-                          <div key={idx} style={{display: 'flex', marginBottom: 24, gap: isMobile ? 12 : 24}}>
-                              <div style={{width: isMobile ? 50 : 80, textAlign: 'center', flexShrink: 0}}>
-                                  <div style={{fontSize: 14, color: isDark ? '#888' : '#999'}}>{item.date.format('ddd')}</div>
-                                  <div style={{fontSize: 28, fontWeight: 'bold', color: isDark ? '#fff' : '#333', lineHeight: 1}}>{item.date.format('DD')}</div>
-                                  <div style={{fontSize: 12, color: isDark ? '#666' : '#bbb'}}>{item.date.format('M月')}</div>
+                          <div key={idx} style={{
+                              display: isMobile ? 'block' : 'flex', // Mobile change: Stack vertical
+                              marginBottom: 24, 
+                              gap: isMobile ? 0 : 24
+                          }}>
+                              <div style={{
+                                  width: isMobile ? '100%' : 80, 
+                                  textAlign: isMobile ? 'left' : 'center', 
+                                  flexShrink: 0,
+                                  display: isMobile ? 'flex' : 'block',
+                                  alignItems: 'center',
+                                  gap: 8,
+                                  marginBottom: isMobile ? 8 : 0,
+                                  paddingBottom: isMobile ? 8 : 0,
+                                  borderBottom: isMobile ? (isDark ? '1px solid #333' : '1px solid #eee') : 'none'
+                              }}>
+                                  <div style={{fontSize: isMobile ? 18 : 14, color: isDark ? '#888' : '#999', fontWeight: isMobile ? 'bold' : 'normal'}}>{item.date.format('ddd')}</div>
+                                  <div style={{fontSize: isMobile ? 18 : 28, fontWeight: 'bold', color: isDark ? '#fff' : '#333', lineHeight: 1}}>{item.date.format(isMobile ? 'MM-DD' : 'DD')}</div>
+                                  {!isMobile && <div style={{fontSize: 12, color: isDark ? '#666' : '#bbb'}}>{item.date.format('M月')}</div>}
+                                  {item.holiday && <Tag color="red" style={{marginLeft: isMobile ? 'auto' : 0, marginTop: isMobile ? 0 : 8}}>{item.holiday.name}</Tag>}
                               </div>
-                              <div style={{flex: 1, borderLeft: isDark ? '1px solid #333' : '1px solid #e8e8e8', paddingLeft: isMobile ? 12 : 24}}>
-                                  {item.holiday && <Tag color="red" style={{marginBottom: 8}}>{item.holiday.name}</Tag>}
+                              <div style={{
+                                  flex: 1, 
+                                  borderLeft: !isMobile ? (isDark ? '1px solid #333' : '1px solid #e8e8e8') : 'none', 
+                                  paddingLeft: isMobile ? 0 : 24
+                              }}>
                                   {item.data.groups.map(g => (
                                       <div key={g.id} onClick={() => onEditGroup(g)} style={{padding: '12px', background: isDark ? '#1f1f1f' : '#f9f9f9', borderRadius: 8, borderLeft: `4px solid ${g.color}`, marginBottom: 8, cursor: 'pointer'}}>
                                           <div style={{fontWeight: 'bold', color: isDark ? '#fff' : '#333'}}>{g.name}</div>
@@ -467,7 +455,7 @@ const CalendarView = ({ groups, tasks, onEditGroup, onToggleTask, onAddTask, onD
                                       </div>
                                   ))}
                                   {item.data.tasks.map(t => (
-                                      <div key={t.id} style={{display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, opacity: t.done ? 0.5 : 1}}>
+                                      <div key={t.id} style={{display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, padding: '8px', background: isDark ? '#1a1a1a' : '#fff', borderRadius: 6, border: isDark ? '1px solid #333' : '1px solid #f0f0f0', opacity: t.done ? 0.5 : 1}}>
                                           <Checkbox checked={t.done} onChange={() => onToggleTask(t.id, t.done)} />
                                           <span style={{color: isDark ? '#ddd' : '#333', textDecoration: t.done ? 'line-through' : 'none', flex: 1}}>{t.content}</span>
                                           <Tag size="small" style={{fontSize:10, marginRight:0}} color={PRIORITY_CONFIG[t.category].color}>{PRIORITY_CONFIG[t.category].label}</Tag>
@@ -488,6 +476,7 @@ const CalendarView = ({ groups, tasks, onEditGroup, onToggleTask, onAddTask, onD
           styles={{ header: {borderBottom: isDark ? '1px solid #303030' : '1px solid #f0f0f0', background: isDark ? '#141414' : '#fff'}, body: {background: isDark ? '#141414' : '#fff', padding: '24px', display: 'flex', flexDirection: 'column'}, mask: {backdropFilter: 'blur(4px)'}}}
           closeIcon={<span style={{color: isDark ? '#fff' : '#000'}}>✕</span>}
         >
+           {/* ... Drawer Content similar to previous but ensure flex layouts wrap ... */}
            <div style={{ flex: 1, overflowY: 'auto' }}>
               {holiday && (
                   <div style={{ marginBottom: 24, padding: '12px 16px', borderRadius: 8, background: holiday.country === 'AU' ? 'linear-gradient(90deg, #003a8c 0%, #002766 100%)' : 'linear-gradient(90deg, #a8071a 0%, #5c0011 100%)', display: 'flex', alignItems: 'center', gap: 12, border: '1px solid rgba(255,255,255,0.1)' }}>
@@ -577,7 +566,8 @@ const CalendarView = ({ groups, tasks, onEditGroup, onToggleTask, onAddTask, onD
               display: isMobile ? 'flex' : 'block', 
               overflowX: 'auto', 
               gap: 8,
-              paddingBottom: isMobile ? 8 : 0
+              paddingBottom: isMobile ? 8 : 0,
+              scrollbarWidth: 'none' // Hide scrollbar for cleaner look
           }}>
             {Object.entries(PRIORITY_CONFIG).map(([key, cfg]) => {
                 const count = tasks.filter(t => t.category === key && !t.done).length;
@@ -587,57 +577,61 @@ const CalendarView = ({ groups, tasks, onEditGroup, onToggleTask, onAddTask, onD
                     display: 'flex', justifyContent: 'space-between', padding: '12px 16px', 
                     background: isActive ? `linear-gradient(90deg, ${cfg.color}33 0%, rgba(0,0,0,0) 100%)` : 'transparent', 
                     borderLeft: isActive && !isMobile ? `4px solid ${cfg.color}` : (isMobile && isActive ? 'none' : '4px solid transparent'), 
-                    borderBottom: isMobile && isActive ? `4px solid ${cfg.color}` : 'none',
+                    // Mobile active state style
+                    border: isMobile && isActive ? `1px solid ${cfg.color}` : 'none',
                     borderRadius: 8, marginBottom: 8, color: isDark ? '#fff' : '#333', cursor: 'pointer', transition: 'all 0.3s',
                     flexShrink: 0,
-                    minWidth: isMobile ? 100 : 'auto'
+                    minWidth: isMobile ? 120 : 'auto',
+                    alignItems: 'center'
                 }}>
-                    <span style={{fontWeight: 600}}>{cfg.icon} {cfg.label}</span>
+                    <span style={{fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6}}>{cfg.icon} {cfg.label}</span>
                     <span style={{ fontWeight: 'bold', opacity: 0.8 }}>{count > 0 ? count : ''}</span>
                 </div>
                 );
             })}
           </div>
         </div>
-        <div style={{ flex: 1 }}>
+        <div style={{ flex: 1, minHeight: 0 }}>
           <Card style={styles.glassCard} title={<div style={{display: 'flex', alignItems: 'center', gap: 8, color: isDark ? '#fff' : '#000'}}>{PRIORITY_CONFIG[activeCategory].icon} <span>{PRIORITY_CONFIG[activeCategory].label}清单</span></div>}>
-            <List dataSource={currentList} locale={{ emptyText: <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无此类事项" /> }}
-              renderItem={item => (
-                <List.Item 
-                  style={{ 
-                      padding: '12px 16px', 
-                      background: isDark ? (item.done ? 'rgba(255,255,255,0.01)' : 'rgba(255,255,255,0.04)') : (item.done ? '#fdfdfd' : '#fff'), 
-                      marginBottom: 8, 
-                      borderRadius: 8, 
-                      border: isDark ? '1px solid rgba(255,255,255,0.05)' : '1px solid #e8e8e8',
-                      transition: 'all 0.4s ease-in-out',
-                      opacity: item.done ? 0.6 : 1, 
-                  }} 
-                  actions={[
-                      <Tooltip title="编辑"><Button type="text" icon={<EditOutlined style={{color: '#1890ff'}}/>} onClick={() => onEdit(item)} /></Tooltip>,
-                      <Popconfirm title="确认删除" description="删除后无法恢复" onConfirm={() => onDelete(item.id)} okText="删除" cancelText="点错了" okButtonProps={{danger: true}}>
-                          <Button type="text" danger icon={<DeleteOutlined />} />
-                      </Popconfirm>
-                  ]}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%' }}>
-                    <Checkbox checked={item.done} onChange={() => onToggle(item.id, item.done)} style={{ transform: 'scale(1.2)' }} />
-                    <div style={{ flex: 1, transition: 'all 0.3s' }}>
-                        <div style={{ 
-                            fontSize: 15, 
-                            textDecoration: item.done ? 'line-through' : 'none',
-                            color: item.done ? (isDark ? '#666' : '#bbb') : (isDark ? '#fff' : '#333') 
-                        }}>
-                            {item.content}
-                        </div>
-                        <div style={{ display: 'flex', gap: 12, marginTop: 4, fontSize: 12, color: isDark ? 'rgba(255,255,255,0.45)' : '#999' }}>
-                            {item.deadline && <span><ClockCircleOutlined /> {item.deadline}</span>}
-                            {item.linkedInfo && <span style={{color: '#1890ff'}}> <RocketOutlined /> 关联: {groups.find(g=>g.id===item.linkedInfo.groupId)?.name}</span>}
+            <div style={{overflowY: 'auto', height: '100%', paddingRight: 4}}>
+                <List dataSource={currentList} locale={{ emptyText: <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无此类事项" /> }}
+                renderItem={item => (
+                    <List.Item 
+                    style={{ 
+                        padding: '12px 16px', 
+                        background: isDark ? (item.done ? 'rgba(255,255,255,0.01)' : 'rgba(255,255,255,0.04)') : (item.done ? '#fdfdfd' : '#fff'), 
+                        marginBottom: 8, 
+                        borderRadius: 8, 
+                        border: isDark ? '1px solid rgba(255,255,255,0.05)' : '1px solid #e8e8e8',
+                        transition: 'all 0.4s ease-in-out',
+                        opacity: item.done ? 0.6 : 1, 
+                    }} 
+                    actions={[
+                        <Tooltip title="编辑"><Button type="text" icon={<EditOutlined style={{color: '#1890ff'}}/>} onClick={() => onEdit(item)} /></Tooltip>,
+                        <Popconfirm title="确认删除" description="删除后无法恢复" onConfirm={() => onDelete(item.id)} okText="删除" cancelText="点错了" okButtonProps={{danger: true}}>
+                            <Button type="text" danger icon={<DeleteOutlined />} />
+                        </Popconfirm>
+                    ]}
+                    >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%' }}>
+                        <Checkbox checked={item.done} onChange={() => onToggle(item.id, item.done)} style={{ transform: 'scale(1.2)' }} />
+                        <div style={{ flex: 1, transition: 'all 0.3s' }}>
+                            <div style={{ 
+                                fontSize: 15, 
+                                textDecoration: item.done ? 'line-through' : 'none',
+                                color: item.done ? (isDark ? '#666' : '#bbb') : (isDark ? '#fff' : '#333') 
+                            }}>
+                                {item.content}
+                            </div>
+                            <div style={{ display: 'flex', gap: 12, marginTop: 4, fontSize: 12, color: isDark ? 'rgba(255,255,255,0.45)' : '#999' }}>
+                                {item.deadline && <span><ClockCircleOutlined /> {item.deadline}</span>}
+                                {item.linkedInfo && <span style={{color: '#1890ff'}}> <RocketOutlined /> 关联: {groups.find(g=>g.id===item.linkedInfo.groupId)?.name}</span>}
+                            </div>
                         </div>
                     </div>
-                  </div>
-                </List.Item>
-            )} />
+                    </List.Item>
+                )} />
+            </div>
           </Card>
         </div>
       </div>
@@ -681,26 +675,72 @@ const CalendarView = ({ groups, tasks, onEditGroup, onToggleTask, onAddTask, onD
         });
         setQuickContent(''); setQuickDate(null); setQuickCategory('reminder'); 
     };
+
+    // Mobile specific: Horizontal scrollable group selector
+    const MobileGroupSelector = () => (
+        <div style={{
+            display: 'flex', 
+            overflowX: 'auto', 
+            gap: 12, 
+            padding: '4px 0 12px 0', 
+            marginBottom: 8,
+            scrollbarWidth: 'none'
+        }}>
+            {groups.map(item => (
+                <div 
+                    key={item.id} 
+                    onClick={() => setActiveGroupId(item.id)}
+                    style={{
+                        padding: '8px 16px',
+                        borderRadius: 20,
+                        background: activeGroupId === item.id ? item.color : (isDark ? '#1f1f1f' : '#f0f0f0'),
+                        color: activeGroupId === item.id ? '#fff' : (isDark ? '#aaa' : '#666'),
+                        whiteSpace: 'nowrap',
+                        fontSize: 14,
+                        fontWeight: 500,
+                        boxShadow: activeGroupId === item.id ? '0 2px 6px rgba(0,0,0,0.2)' : 'none',
+                        transition: 'all 0.3s'
+                    }}
+                >
+                    {item.name}
+                </div>
+            ))}
+        </div>
+    );
   
     return (
       <Row gutter={[16, 16]} style={{ height: '100%' }}>
-        <Col xs={24} md={6}>
-          <Card style={{...styles.glassCard, maxHeight: isMobile ? 200 : '100%', overflowY: 'auto'}} title={<span style={{color: isDark ? '#fff' : '#000'}}>团队列表</span>}>
-             <List dataSource={groups} renderItem={item => (
-                 <div onClick={() => setActiveGroupId(item.id)} style={{ padding: '16px', marginBottom: 12, borderRadius: 12, cursor: 'pointer', background: activeGroupId === item.id ? `linear-gradient(90deg, ${item.color}33 0%, rgba(0,0,0,0) 100%)` : (isDark ? 'rgba(255,255,255,0.05)' : '#f9f9f9'), borderLeft: activeGroupId === item.id ? `4px solid ${item.color}` : '4px solid transparent', transition: 'all 0.3s' }}>
-                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div style={{ color: isDark ? '#fff' : '#333', fontWeight: 600, fontSize: 15, overflow: 'hidden', whiteSpace:'nowrap', textOverflow:'ellipsis', maxWidth: '70%' }}>{item.name}</div>
-                      <Tag color={activeGroupId === item.id ? item.color : 'default'}>{Math.round((tasks.filter(t => t.linkedInfo?.groupId === item.id && t.done).length / (tasks.filter(t => t.linkedInfo?.groupId === item.id).length || 1)) * 100)}%</Tag>
-                   </div>
-                   <div style={{ color: isDark ? 'rgba(255,255,255,0.5)' : '#999', fontSize: 12, marginTop: 4 }}>{item.start} 出发</div>
-                 </div>
-             )} />
-          </Card>
-        </Col>
-        <Col xs={24} md={18} style={{ height: isMobile ? 'auto' : '100%' }}>
-          {activeGroup ? (
-            <Card style={styles.glassCard} bodyStyle={{display: 'flex', flexDirection: 'column', height: '100%'}}>
-               <div style={{ display: 'flex', alignItems: isMobile ? 'flex-start' : 'center', marginBottom: 24, paddingBottom: 16, borderBottom: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e8e8e8', flexDirection: isMobile ? 'column' : 'row', gap: isMobile ? 12 : 0 }}>
+        {/* PC Sidebar / Mobile Hidden */}
+        {!isMobile && (
+            <Col xs={24} md={6} style={{height: '100%'}}>
+            <Card style={{...styles.glassCard, height: '100%', overflowY: 'auto'}} title={<span style={{color: isDark ? '#fff' : '#000'}}>团队列表</span>}>
+                <List dataSource={groups} renderItem={item => (
+                    <div onClick={() => setActiveGroupId(item.id)} style={{ padding: '16px', marginBottom: 12, borderRadius: 12, cursor: 'pointer', background: activeGroupId === item.id ? `linear-gradient(90deg, ${item.color}33 0%, rgba(0,0,0,0) 100%)` : (isDark ? 'rgba(255,255,255,0.05)' : '#f9f9f9'), borderLeft: activeGroupId === item.id ? `4px solid ${item.color}` : '4px solid transparent', transition: 'all 0.3s' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div style={{ color: isDark ? '#fff' : '#333', fontWeight: 600, fontSize: 15, overflow: 'hidden', whiteSpace:'nowrap', textOverflow:'ellipsis', maxWidth: '70%' }}>{item.name}</div>
+                        <Tag color={activeGroupId === item.id ? item.color : 'default'}>{Math.round((tasks.filter(t => t.linkedInfo?.groupId === item.id && t.done).length / (tasks.filter(t => t.linkedInfo?.groupId === item.id).length || 1)) * 100)}%</Tag>
+                    </div>
+                    <div style={{ color: isDark ? 'rgba(255,255,255,0.5)' : '#999', fontSize: 12, marginTop: 4 }}>{item.start} 出发</div>
+                    </div>
+                )} />
+            </Card>
+            </Col>
+        )}
+
+        <Col xs={24} md={18} style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+            {isMobile && <MobileGroupSelector />}
+            
+            {activeGroup ? (
+            <Card style={{...styles.glassCard, flex: 1}} bodyStyle={{display: 'flex', flexDirection: 'column', height: '100%'}}>
+               <div style={{ 
+                   display: 'flex', 
+                   alignItems: isMobile ? 'flex-start' : 'center', 
+                   marginBottom: 24, 
+                   paddingBottom: 16, 
+                   borderBottom: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e8e8e8', 
+                   flexDirection: isMobile ? 'column' : 'row', 
+                   gap: isMobile ? 16 : 0 
+                }}>
                   <div style={{display: 'flex', alignItems: 'center', flex: 1}}>
                       <div style={{ width: 6, height: 40, background: activeGroup.color, borderRadius: 4, marginRight: 16 }}></div>
                       <div>
@@ -708,20 +748,35 @@ const CalendarView = ({ groups, tasks, onEditGroup, onToggleTask, onAddTask, onD
                         <Text style={{ color: isDark ? 'rgba(255,255,255,0.5)' : '#999' }}>任务流 (根据Deadline自动排序)</Text>
                       </div>
                   </div>
-                  <div style={{display: 'flex', gap: 8, background: isDark ? 'rgba(255,255,255,0.05)' : '#f5f5f5', padding: 8, borderRadius: 8, border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e8e8e8', flexDirection: isMobile ? 'column' : 'row', width: isMobile ? '100%' : 'auto'}}>
+                  
+                  {/* Quick Add Section */}
+                  <div style={{
+                      display: 'flex', 
+                      gap: 8, 
+                      background: isDark ? 'rgba(255,255,255,0.05)' : '#f5f5f5', 
+                      padding: 12, 
+                      borderRadius: 8, 
+                      border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e8e8e8', 
+                      flexDirection: isMobile ? 'column' : 'row', 
+                      width: isMobile ? '100%' : 'auto'
+                  }}>
                       <div style={{display:'flex', gap:8}}>
-                          <Select value={quickCategory} onChange={setQuickCategory} style={{width: 110}} dropdownStyle={{background: isDark ? '#1f1f1f' : '#fff'}}>{Object.entries(PRIORITY_CONFIG).map(([k,v]) => (<Select.Option key={k} value={k}><Badge color={v.color} text={v.label} /></Select.Option>))}</Select>
-                          <DatePicker placeholder="截止日" style={{width: 130}} value={quickDate} onChange={setQuickDate} />
+                          <Select value={quickCategory} onChange={setQuickCategory} style={{width: isMobile ? '40%' : 110}} dropdownStyle={{background: isDark ? '#1f1f1f' : '#fff'}}>{Object.entries(PRIORITY_CONFIG).map(([k,v]) => (<Select.Option key={k} value={k}><Badge color={v.color} text={v.label} /></Select.Option>))}</Select>
+                          <DatePicker placeholder="截止日" style={{width: isMobile ? '60%' : 130}} value={quickDate} onChange={setQuickDate} />
                       </div>
                       <div style={{display:'flex', gap:8, flex:1}}>
                            <Input placeholder="输入任务内容..." style={{flex: 1}} value={quickContent} onChange={e => setQuickContent(e.target.value)} onPressEnter={handleQuickAdd} />
-                           <Button type="primary" icon={<PlusOutlined />} onClick={handleQuickAdd} />
+                           <Button type="primary" icon={<PlusOutlined />} onClick={handleQuickAdd}>添加</Button>
                       </div>
                   </div>
                </div>
-               <div style={{flex: 1, overflowY: 'auto', paddingRight: 10}}>
+
+               <div style={{flex: 1, overflowY: 'auto', paddingRight: 10, paddingBottom: 20}}>
                   {sortedWorkflow.length > 0 ? (
-                      <Steps direction="vertical" current={-1} items={sortedWorkflow.map((task, index) => {
+                      <Steps 
+                        direction="vertical" 
+                        current={-1} 
+                        items={sortedWorkflow.map((task, index) => {
                               const status = getStepStatus(task, index);
                               let icon = <ClockCircleOutlined />;
                               let subColor = '#999';
@@ -731,7 +786,7 @@ const CalendarView = ({ groups, tasks, onEditGroup, onToggleTask, onAddTask, onD
                               return {
                                   status: status,
                                   icon: <div onClick={() => onToggleTask(task.id, task.done)} style={{ cursor: 'pointer', fontSize: 22, background: isDark ? '#000' : '#fff', borderRadius: '50%', zIndex: 2 }}>{icon}</div>,
-                                  title: (<div onClick={() => onToggleTask(task.id, task.done)} style={{ cursor: 'pointer', display: 'flex', justifyContent: 'space-between', width: '100%', opacity: status === 'finish' ? 0.5 : 1, textDecoration: status === 'finish' ? 'line-through' : 'none' }}>
+                                  title: (<div onClick={() => onToggleTask(task.id, task.done)} style={{ cursor: 'pointer', display: 'flex', justifyContent: 'space-between', width: '100%', opacity: status === 'finish' ? 0.5 : 1, textDecoration: status === 'finish' ? 'line-through' : 'none', flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'flex-start' : 'center', gap: isMobile ? 4 : 0 }}>
                                           <div style={{display:'flex', alignItems:'center', gap: 8}}><Tag color={PRIORITY_CONFIG[task.category].color} style={{marginRight:0}}>{PRIORITY_CONFIG[task.category].label}</Tag><span style={{ color: isDark ? '#fff' : '#000', fontSize: 16, fontWeight: 500 }}>{task.content}</span></div>
                                           <div style={{fontSize: 12}}>{status === 'error' && <Tag color="error">已逾期</Tag>}<Tag color="blue">{task.deadline}</Tag></div>
                                       </div>),
@@ -761,7 +816,7 @@ const App = () => {
 
   // 2. 响应式检测
   const screens = useBreakpoint();
-  const isMobile = !screens.md; // md(768px) 以下视为手机
+  const isMobile = (screens.xs || !screens.md); // 适配逻辑增强：XS或非MD以上视为Mobile
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // 3. 监听登录状态
@@ -825,9 +880,7 @@ const App = () => {
   };
   const openCreateGroup = () => { setEditingGroup(null); groupForm.resetFields(); setGroupModalOpen(true); };
   
-  // ✅ 修复：Enter键提交时 ID 丢失的问题
   const handleGroupSubmit = async (values) => {
-    // 优先读取 editingGroup 的 ID，防止 disabled input 不返回值
     const safeId = editingGroup ? editingGroup.id : (values.id ? values.id.trim() : '');
     const safeName = values.name ? values.name.trim() : '';
 
@@ -843,7 +896,6 @@ const App = () => {
         user_id: session.user.id
     };
 
-    // 乐观更新
     const { error } = await supabase.from('groups').upsert(groupData);
     if (error) { 
         console.error(error); 
@@ -909,7 +961,6 @@ const App = () => {
           message.success('任务已更新');
       } else {
           const id = Date.now();
-          // 注意：Supabase 需要 bigint，JS Date.now() 是安全的，但作为 JSON 传给 API 时最好保持数字
           const { error } = await supabase.from('tasks').insert([{ id, done: false, ...newTaskData }]);
           if (error) { message.error('创建失败: ' + error.message); return; }
 
@@ -969,7 +1020,6 @@ const App = () => {
   return (
     <ConfigProvider locale={locale} theme={{ algorithm: isDarkMode ? theme.darkAlgorithm : theme.defaultAlgorithm, token: { colorPrimary: '#1890ff', borderRadius: 8 } }}>
       <Layout style={styles.layout} hasSider> 
-        {/* PC 端侧边栏 */}
         {!isMobile && (
           <Sider width={220} style={styles.sider}>
             <SidebarContent 
@@ -981,7 +1031,6 @@ const App = () => {
           </Sider>
         )}
 
-        {/* 移动端 Drawer 菜单 */}
         <Drawer
             placement="left"
             onClose={() => setMobileMenuOpen(false)}
@@ -1002,7 +1051,6 @@ const App = () => {
         <Layout style={styles.innerLayout}>
           <Header style={{ ...styles.header, padding: isMobile ? '0 16px' : '0 24px' }}>
               <div style={{display:'flex', alignItems:'center', gap: 12}}>
-                  {/* 移动端汉堡按钮 */}
                   {isMobile && <Button type="text" icon={<MenuOutlined style={{color: isDarkMode?'#fff':'#000', fontSize: 18}} />} onClick={() => setMobileMenuOpen(true)} />}
                   <Title level={4} style={{ margin: 0, color: isDarkMode ? '#fff' : '#000', fontSize: isMobile ? 18 : 20 }}>
                     {activeTab === 'calendar' ? '日历总览' : activeTab === 'tasks' ? '待办中心' : '流程追踪'}
@@ -1023,7 +1071,7 @@ const App = () => {
                 onDeleteTask={handleDeleteTask} 
                 onEditTask={openEditTask}
                 isDark={isDarkMode}
-                isMobile={isMobile} // 传入移动端标志
+                isMobile={isMobile} 
               />
             )}
             {activeTab === 'tasks' && <TaskBoard tasks={tasks} groups={groups} onToggle={handleTaskToggle} onDelete={handleDeleteTask} onEdit={openEditTask} onCreate={openCreateTask} isDark={isDarkMode} isMobile={isMobile} />}
@@ -1031,7 +1079,6 @@ const App = () => {
           </Content>
         </Layout>
         
-        {/* Modals */}
         <Modal 
             open={groupModalOpen} 
             onCancel={() => setGroupModalOpen(false)} 
