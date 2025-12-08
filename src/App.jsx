@@ -49,48 +49,22 @@ const COLOR_PALETTE = [
 ];
 
 const HOLIDAYS = {
-  // --- 2025 长假 & 节日 ---
-  '2025-01-01': { name: '元旦', country: 'CN' },
-  '2025-01-26': { name: 'Aus Day', country: 'AU' },
-  '2025-01-27': { name: 'Aus Day (Obs)', country: 'AU' },
-  '2025-01-28': { name: '除夕', country: 'CN' },
-  '2025-01-29': { name: '春节', country: 'CN' },
-  '2025-01-30': { name: '初二', country: 'CN' },
-  '2025-01-31': { name: '初三', country: 'CN' },
-  '2025-02-01': { name: '初四', country: 'CN' },
-  '2025-02-02': { name: '初五', country: 'CN' },
-  '2025-02-03': { name: '初六', country: 'CN' },
-  '2025-02-04': { name: '初七', country: 'CN' },
-  '2025-04-04': { name: '清明', country: 'CN' },
-  '2025-04-05': { name: '假期', country: 'CN' },
-  '2025-04-06': { name: '假期', country: 'CN' },
-  '2025-04-18': { name: 'Good Fri', country: 'AU' },
-  '2025-04-19': { name: 'Easter Sat', country: 'AU' },
-  '2025-04-20': { name: 'Easter Sun', country: 'AU' },
-  '2025-04-21': { name: 'Easter Mon', country: 'AU' },
-  '2025-04-25': { name: 'Anzac Day', country: 'AU' },
-  '2025-05-01': { name: '劳动节', country: 'CN' },
-  '2025-05-02': { name: '假期', country: 'CN' },
-  '2025-05-03': { name: '假期', country: 'CN' },
-  '2025-05-04': { name: '假期', country: 'CN' },
-  '2025-05-05': { name: '假期', country: 'CN' },
-  '2025-05-31': { name: '端午', country: 'CN' },
-  '2025-06-01': { name: '假期', country: 'CN' },
-  '2025-06-02': { name: '假期', country: 'CN' },
-  '2025-06-09': { name: 'King\'s Bday', country: 'AU' },
-  '2025-10-01': { name: '国庆节', country: 'CN' },
-  '2025-10-02': { name: '假期', country: 'CN' },
-  '2025-10-03': { name: '假期', country: 'CN' },
-  '2025-10-04': { name: '假期', country: 'CN' },
-  '2025-10-05': { name: '假期', country: 'CN' },
-  '2025-10-06': { name: '中秋节', country: 'CN' },
-  '2025-10-07': { name: '假期', country: 'CN' },
-  '2025-10-08': { name: '假期', country: 'CN' },
+  // ================= 2025 (剩余) =================
   '2025-12-25': { name: 'Christmas', country: 'AU' },
   '2025-12-26': { name: 'Boxing Day', country: 'AU' },
 
-  '2026-01-01': { name: '元旦', country: 'CN' },
+  // ================= 2026 (全年) =================
+  // --- 元旦 (New Year) ---
+  '2026-01-01': { name: '元旦/NYD', country: 'CN' }, // 中澳同庆
+  '2026-01-02': { name: '假期', country: 'CN' }, // 中澳同庆
+  '2026-01-03': { name: '假期', country: 'CN' }, // 中澳同庆
+
+  // --- 澳洲国庆 (Australia Day) ---
   '2026-01-26': { name: 'Aus Day', country: 'AU' },
+
+  // --- 春节 (Chinese New Year) ---
+  // 2026年春节是2月17日，假期通常从除夕开始放7天
+  '2026-02-15': { name: '调休(班)', country: 'CN' }, // 预测调休上班
   '2026-02-16': { name: '除夕', country: 'CN' },
   '2026-02-17': { name: '春节', country: 'CN' },
   '2026-02-18': { name: '初二', country: 'CN' },
@@ -98,8 +72,79 @@ const HOLIDAYS = {
   '2026-02-20': { name: '初四', country: 'CN' },
   '2026-02-21': { name: '初五', country: 'CN' },
   '2026-02-22': { name: '初六', country: 'CN' },
+  '2026-02-28': { name: '调休(班)', country: 'CN' }, // 预测调休上班
+
+  // --- 澳洲复活节 (Easter 2026) ---
+  // 2026年复活节较早 (4月3日-6日)
+  '2026-04-03': { name: 'Good Fri', country: 'AU' },
+  '2026-04-04': { name: 'Easter Sat', country: 'AU' },
+  '2026-04-05': { name: 'Easter Sun', country: 'AU' },
+  '2026-04-06': { name: 'Easter Mon', country: 'AU' },
+
+  // --- 清明节 (Qingming) ---
+  // 2026年4月5日是清明(周日)，通常周一补休
+  '2026-04-05': { name: '清明节', country: 'CN' },
+  '2026-04-06': { name: '补休假期', country: 'CN' }, // 与澳洲Easter Mon重合
+
+  // --- 澳新军团日 (Anzac Day) ---
+  '2026-04-25': { name: 'Anzac Day', country: 'AU' },
+
+  // --- 劳动节 (Labor Day CN) ---
+  // 惯例5月1日-5日
+  '2026-04-26': { name: '调休(班)', country: 'CN' }, // 预测调休
+  '2026-05-01': { name: '劳动节', country: 'CN' },
+  '2026-05-02': { name: '假期', country: 'CN' },
+  '2026-05-03': { name: '假期', country: 'CN' },
+  '2026-05-04': { name: '假期', country: 'CN' },
+  '2026-05-05': { name: '假期', country: 'CN' },
+  '2026-05-09': { name: '调休(班)', country: 'CN' }, // 预测调休
+
+  // --- 澳洲国王生日 (King's Birthday) ---
+  // 多数州(NSW, VIC等)为6月第二个周一
+  '2026-06-08': { name: 'King\'s Bday', country: 'AU' },
+
+  // --- 端午节 (Dragon Boat) ---
+  // 2026端午是6月19日(周五)，通常连周末休3天
+  '2026-06-19': { name: '端午节', country: 'CN' },
+  '2026-06-20': { name: '假期', country: 'CN' },
+  '2026-06-21': { name: '假期', country: 'CN' },
+
+  // --- 中秋节 (Mid-Autumn) ---
+  // 2026中秋是9月25日(周五)，通常连周末休3天
+  '2026-09-25': { name: '中秋节', country: 'CN' },
+  '2026-09-26': { name: '假期', country: 'CN' },
+  '2026-09-27': { name: '假期', country: 'CN' },
+
+  // --- 国庆节 (National Day) ---
+  // 2026年10月1日-7日
+  '2026-09-26': { name: '调休(班)', country: 'CN' }, // 预测
   '2026-10-01': { name: '国庆节', country: 'CN' },
+  '2026-10-02': { name: '假期', country: 'CN' },
+  '2026-10-03': { name: '假期', country: 'CN' },
+  '2026-10-04': { name: '假期', country: 'CN' },
+  '2026-10-05': { name: '假期', country: 'CN' }, // NSW劳动节重合
+  '2026-10-06': { name: '假期', country: 'CN' },
+  '2026-10-07': { name: '假期', country: 'CN' },
+  '2026-10-10': { name: '调休(班)', country: 'CN' }, // 预测
+
+  // --- 澳洲劳动节 (Labour Day - NSW/ACT/SA) ---
+  // 10月第一个周一
+  '2026-10-05': { name: 'Labour Day', country: 'AU' }, 
+
+  // --- 圣诞节 (Christmas) ---
   '2026-12-25': { name: 'Christmas', country: 'AU' },
+  '2026-12-26': { name: 'Boxing Day', country: 'AU' },
+  '2026-12-28': { name: 'Boxing(Obs)', country: 'AU' }, // 26是周六，通常28补休
+
+  // ================= 2027 (年初预测) =================
+  '2027-01-01': { name: '元旦', country: 'CN' },
+  '2027-01-26': { name: 'Aus Day', country: 'AU' },
+  
+  // 2027春节 (2月6日)
+  '2027-02-05': { name: '除夕', country: 'CN' },
+  '2027-02-06': { name: '春节', country: 'CN' },
+  '2027-02-07': { name: '初二', country: 'CN' },
+  '2027-02-08': { name: '初三', country: 'CN' },
 };
 
 const PRIORITY_CONFIG = {
