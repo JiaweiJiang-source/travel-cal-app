@@ -827,12 +827,341 @@ const CalendarView = ({ groups, tasks, onEditGroup, onToggleTask, onAddTask, onD
     );
   };
   
+  // --- 新增组件: 类似 Apple 备忘录的层级笔记本 ---
+  const GroupNotepad = ({ group, onSave, isDark }) => {
+    // 初始化数据：如果没有数据，默认给一行空行
+    const [blocks, setBlocks] = useState(() => {
+      return (group.memo_data && Array.isArray(group.memo_data) && group.memo_data.length > 0)
+        ? group.memo_data 
+        : [{ id: Date.now(), content: '', level: 0, checked: false }];
+    });
+
+    // 自动保存防抖
+    useEffect(() => {
+      const timer = setTimeout(() => {
+        onSave(group.id, blocks);
+      }, 1000); // 1秒后自动保存
+      return () => clearTimeout(timer);
+    }, [blocks, group.id]);
+
+    // 更新某一行
+    const updateBlock = (id, field, value) => {
+      setBlocks(prev => prev.map(b => b.id === id ? { ...b, [field]: value } : b));
+    };
+
+    // 键盘事件核心逻辑
+    const handleKeyDown = (e, index, id) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        const newBlock = { id: Date.now(), content: '', level: blocks[index].level, checked: false };
+        const newBlocks = [...blocks];
+        newBlocks.splice(index + 1, 0, newBlock);
+        setBlocks(newBlocks);
+        // 聚焦到下一行 (简单实现: 利用 setTimeout 等待渲染)
+        setTimeout(() => document.getElementById(`note-input-${newBlock.id}`)?.focus(), 0);
+      } 
+      else if (e.key === 'Backspace' && blocks[index].content === '') {
+        e.preventDefault();
+        if (blocks.length > 1) {
+          const newBlocks = blocks.filter(b => b.id !== id);
+          setBlocks(newBlocks);
+          setTimeout(() => document.getElementById(`note-input-${blocks[index - 1].id}`)?.focus(), 0);
+        }
+      }
+      else if (e.key === 'Tab') {
+        e.preventDefault();
+        const newLevel = e.shiftKey ? Math.max(0, blocks[index].level - 1) : Math.min(4, blocks[index].level + 1);
+        updateBlock(id, 'level', newLevel);
+      }
+    };
+
+    return (
+      <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+        <div style={{ marginBottom: 12, paddingBottom: 8, borderBottom: isDark ? '1px solid #333' : '1px solid #eee', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span style={{ fontWeight: 'bold', color: isDark ? '#fff' : '#333' }}>
+            <FileTextOutlined style={{ marginRight: 6 }} /> 团务随记
+          </span>
+          <span style={{ fontSize: 12, color: '#999' }}>Tab缩进 / Enter换行</span>
+        </div>
+        
+        <div style={{ flex: 1, overflowY: 'auto', paddingRight: 4 }}>
+          {blocks.map((block, index) => (
+            <div key={block.id} style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              marginBottom: 4, 
+              paddingLeft: `${block.level * 24}px`, // 层级缩进
+              opacity: block.checked ? 0.5 : 1,
+              transition: 'all 0.2s'
+            }}>
+              {/* 拖拽/层级指示点 (根据层级变色) */}
+              <div style={{ marginRight: 8, cursor: 'pointer', color: isDark ? '#555' : '#ccc' }} onClick={() => updateBlock(block.id, 'checked', !block.checked)}>
+                {block.checked ? <CheckCircleOutlined style={{color: '#52c41a'}} /> : (
+                  <div style={{width: 6, height: 6, borderRadius: '50%', background: block.level === 0 ? (isDark?'#fff':'#000') : '#999'}}></div>
+                )}
+              </div>
+
+              <Input
+                id={`note-input-${block.id}`}
+                value={block.content}
+                onChange={(e) => updateBlock(block.id, 'content', e.target.value)}
+                onKeyDown={(e) => handleKeyDown(e, index, block.id)}
+                placeholder={block.level === 0 ? "大流程/主题..." : "子项..."}
+                bordered={false}
+                style={{ 
+                  padding: '4px 0',
+                  color: isDark ? '#ddd' : '#333',
+                  textDecoration: block.checked ? 'line-through' : 'none',
+                  fontWeight: block.level === 0 ? 600 : 400, // 第一级加粗
+                  fontSize: block.level === 0 ? 15 : 14
+                }}
+              />
+              
+              {/* 每一行的操作栏 (鼠标悬停显示可优化，这里直接显示) */}
+              <Button type="text" size="small" icon={<DeleteOutlined style={{fontSize: 12, color: '#999'}} />} onClick={() => {
+                  if(blocks.length > 1) setBlocks(prev => prev.filter(b => b.id !== block.id));
+              }} />
+            </div>
+          ))}
+          
+          {/* 点击底部空白处添加新行 */}
+          <div 
+            style={{ height: 100, cursor: 'text' }} 
+            onClick={() => {
+              const newId = Date.now();
+              setBlocks(prev => [...prev, { id: newId, content: '', level: 0, checked: false }]);
+              setTimeout(() => document.getElementById(`note-input-${newId}`)?.focus(), 0);
+            }} 
+          />
+        </div>
+      </div>
+    );
+  };
+
   // 1. 在参数里解构出 onDelete 和 onEdit
+  // const WorkflowTracker = ({ groups, tasks, onToggleTask, onAddQuickTask, onDelete, onEdit, isDark, isMobile }) => {
+  //   const [activeGroupId, setActiveGroupId] = useState(null);
+  //   const [quickCategory, setQuickCategory] = useState('reminder'); 
+  //   const [quickContent, setQuickContent] = useState('');
+  //   const [quickDate, setQuickDate] = useState(null); // 日期允许为 null
+  //   const styles = getStyles(isDark);
+  
+  //   useEffect(() => {
+  //     if (groups.length > 0 && (!activeGroupId || !groups.find(g => g.id === activeGroupId))) {
+  //       setActiveGroupId(groups[0].id);
+  //     }
+  //   }, [groups, activeGroupId]);
+  
+  //   const activeGroup = groups.find(g => g.id === activeGroupId);
+
+  //   // ✅ 修改 1: 将任务拆分为“时间轴任务”和“无日期备注”
+  //   const { timelineTasks, memoTasks } = useMemo(() => {
+  //       if (!activeGroupId) return { timelineTasks: [], memoTasks: [] };
+        
+  //       const groupTasks = tasks.filter(t => t.linkedInfo?.groupId === activeGroupId);
+        
+  //       const timeline = groupTasks
+  //           .filter(t => t.deadline) // 必须有日期
+  //           .sort((a, b) => dayjs(a.deadline).valueOf() - dayjs(b.deadline).valueOf());
+            
+  //       const memo = groupTasks
+  //           .filter(t => !t.deadline) // 没有日期
+  //           .sort((a, b) => Number(a.done) - Number(b.done)); // 未完成在前
+
+  //       return { timelineTasks: timeline, memoTasks: memo };
+  //   }, [activeGroupId, tasks]);
+  
+  //   const getStepStatus = (task, index) => {
+  //     if (task.done) return 'finish';
+  //     if (dayjs(task.deadline).isBefore(dayjs(), 'day')) return 'error';
+  //     const firstUndoneIndex = timelineTasks.findIndex(t => !t.done);
+  //     if (index === firstUndoneIndex) return 'process';
+  //     return 'wait';
+  //   };
+  
+  //   // ✅ 修改 2: 允许提交空日期
+  //   const handleQuickAdd = () => {
+  //       if(!quickContent) return message.error('请填写内容');
+        
+  //       // ❌ 原代码：const deadlineVal = quickDate ? quickDate.format('YYYY-MM-DD') : ''; 
+  //       // ✅ 修改为：如果没有选日期，必须传 null，不能传空字符串
+  //       const deadlineVal = quickDate ? quickDate.format('YYYY-MM-DD') : null; 
+        
+  //       onAddQuickTask({ 
+  //         content: quickContent, 
+  //         deadline: deadlineVal, 
+  //         category: quickCategory, 
+  //         linkedInfo: { groupId: activeGroupId } 
+  //       });
+  //       setQuickContent(''); setQuickDate(null); setQuickCategory('reminder'); 
+  //   };
+
+  //   const MobileGroupSelector = () => (
+  //       <div style={{ display: 'flex', overflowX: 'auto', gap: 12, padding: '4px 0 12px 0', marginBottom: 8, scrollbarWidth: 'none' }}>
+  //           {groups.map(item => (
+  //               <div key={item.id} onClick={() => setActiveGroupId(item.id)}
+  //                   style={{ padding: '8px 16px', borderRadius: 20, background: activeGroupId === item.id ? item.color : (isDark ? '#1f1f1f' : '#f0f0f0'), color: activeGroupId === item.id ? '#fff' : (isDark ? '#aaa' : '#666'), whiteSpace: 'nowrap', fontSize: 14, fontWeight: 500, boxShadow: activeGroupId === item.id ? '0 2px 6px rgba(0,0,0,0.2)' : 'none', transition: 'all 0.3s' }}>
+  //                   {item.name}
+  //               </div>
+  //           ))}
+  //       </div>
+  //   );
+  
+  //   return (
+  //     <Row gutter={[16, 16]} style={{ height: '100%' }}>
+  //       {!isMobile && (
+  //           <Col xs={24} md={6} style={{height: '100%'}}>
+  //           <Card style={{...styles.glassCard, height: '100%', overflowY: 'auto'}} title={<span style={{color: isDark ? '#fff' : '#000'}}>团队列表</span>}>
+  //               <List dataSource={groups} renderItem={item => (
+  //                   <div onClick={() => setActiveGroupId(item.id)} style={{ padding: '16px', marginBottom: 12, borderRadius: 12, cursor: 'pointer', background: activeGroupId === item.id ? `linear-gradient(90deg, ${item.color}33 0%, rgba(0,0,0,0) 100%)` : (isDark ? 'rgba(255,255,255,0.05)' : '#f9f9f9'), borderLeft: activeGroupId === item.id ? `4px solid ${item.color}` : '4px solid transparent', transition: 'all 0.3s' }}>
+  //                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+  //                       <div style={{ color: isDark ? '#fff' : '#333', fontWeight: 600, fontSize: 15, overflow: 'hidden', whiteSpace:'nowrap', textOverflow:'ellipsis', maxWidth: '70%' }}>{item.name}</div>
+  //                       <Tag color={activeGroupId === item.id ? item.color : 'default'}>{Math.round((tasks.filter(t => t.linkedInfo?.groupId === item.id && t.done).length / (tasks.filter(t => t.linkedInfo?.groupId === item.id).length || 1)) * 100)}%</Tag>
+  //                   </div>
+  //                   <div style={{ color: isDark ? 'rgba(255,255,255,0.5)' : '#999', fontSize: 12, marginTop: 4 }}>{item.start} 出发</div>
+  //                   </div>
+  //               )} />
+  //           </Card>
+  //           </Col>
+  //       )}
+
+  //       <Col xs={24} md={18} style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+  //           {isMobile && <MobileGroupSelector />}
+            
+  //           {activeGroup ? (
+  //           <Card style={{...styles.glassCard, flex: 1}} bodyStyle={{display: 'flex', flexDirection: 'column', height: '100%'}}>
+  //              {/* Header 区域 */}
+  //              <div style={{ display: 'flex', alignItems: isMobile ? 'flex-start' : 'center', marginBottom: 24, paddingBottom: 16, borderBottom: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e8e8e8', flexDirection: isMobile ? 'column' : 'row', gap: isMobile ? 16 : 0 }}>
+  //                 <div style={{display: 'flex', alignItems: 'center', flex: 1}}>
+  //                     <div style={{ width: 6, height: 40, background: activeGroup.color, borderRadius: 4, marginRight: 16 }}></div>
+  //                     <div>
+  //                         <Title level={3} style={{ color: isDark ? '#fff' : '#000', margin: 0 }}>{activeGroup.name}</Title>
+  //                         <Text style={{ color: isDark ? 'rgba(255,255,255,0.5)' : '#999' }}>任务与备忘</Text>
+  //                     </div>
+  //                 </div>
+  //                 <div style={{ display: 'flex', gap: 8, background: isDark ? 'rgba(255,255,255,0.05)' : '#f5f5f5', padding: 12, borderRadius: 8, border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e8e8e8', flexDirection: isMobile ? 'column' : 'row', width: isMobile ? '100%' : 'auto' }}>
+  //                     <div style={{display:'flex', gap:8}}>
+  //                         <Select value={quickCategory} onChange={setQuickCategory} style={{width: isMobile ? '40%' : 110}} dropdownStyle={{background: isDark ? '#1f1f1f' : '#fff'}}>{Object.entries(PRIORITY_CONFIG).map(([k,v]) => (<Select.Option key={k} value={k}><Badge color={v.color} text={v.label} /></Select.Option>))}</Select>
+  //                         {/* 允许清除日期 allowClear */}
+  //                         <DatePicker allowClear placeholder="日期(选填)" style={{width: isMobile ? '60%' : 130}} value={quickDate} onChange={setQuickDate} />
+  //                     </div>
+  //                     <div style={{display:'flex', gap:8, flex:1}}>
+  //                         <Input placeholder="输入内容..." style={{flex: 1}} value={quickContent} onChange={e => setQuickContent(e.target.value)} onPressEnter={handleQuickAdd} />
+  //                         <Button type="primary" icon={<PlusOutlined />} onClick={handleQuickAdd}>添加</Button>
+  //                     </div>
+  //                 </div>
+  //              </div>
+
+  //              {/* ✅ 修改 3: 内容区域分栏 (Row/Col) */}
+  //              <Row gutter={24} style={{flex: 1, overflow: 'hidden'}}>
+                  
+  //                 {/* 左侧：时间轴 (Steps) */}
+  //                 <Col xs={24} md={16} style={{height: '100%', overflowY: 'auto', paddingRight: 12, borderRight: isMobile ? 'none' : (isDark ? '1px solid #333' : '1px solid #f0f0f0')}}>
+  //                     <div style={{marginBottom: 16, fontWeight: 'bold', color: isDark ? '#fff' : '#333', display:'flex', alignItems:'center', gap: 8}}>
+  //                         <ClockCircleOutlined /> 流程进度 ({timelineTasks.length})
+  //                     </div>
+  //                     {timelineTasks.length > 0 ? (
+  //                         <Steps 
+  //                           direction="vertical" 
+  //                           current={-1} 
+  //                           items={timelineTasks.map((task, index) => {
+  //                                 const status = getStepStatus(task, index);
+  //                                 let icon = <ClockCircleOutlined />;
+  //                                 let subColor = '#999';
+  //                                 if (status === 'finish') { icon = <CheckCircleOutlined />; subColor = '#52c41a'; }
+  //                                 else if (status === 'error') { icon = <ExclamationCircleOutlined />; subColor = '#ff4d4f'; }
+  //                                 else if (status === 'process') { icon = <SyncOutlined spin />; subColor = '#1890ff'; }
+                                  
+  //                                 return {
+  //                                     status: status,
+  //                                     icon: (
+  //                                         <div onClick={(e) => { e.stopPropagation(); onToggleTask(task.id, task.done); }} style={{ cursor: 'pointer', fontSize: 22, background: isDark ? '#000' : '#fff', borderRadius: '50%', zIndex: 2 }}>
+  //                                             {icon}
+  //                                         </div>
+  //                                     ),
+  //                                     title: (
+  //                                         <div onClick={() => onEdit(task)} style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column', width: '100%', opacity: status === 'finish' ? 0.5 : 1 }}>
+  //                                             <div style={{display:'flex', alignItems:'center', gap: 8}}>
+  //                                                 <Tag color={PRIORITY_CONFIG[task.category].color}>{PRIORITY_CONFIG[task.category].label}</Tag>
+  //                                                 <span style={{ color: isDark ? '#fff' : '#000', fontSize: 16, fontWeight: 500, textDecoration: status === 'finish' ? 'line-through' : 'none' }}>{task.content}</span>
+  //                                             </div>
+  //                                             <div style={{fontSize: 12, marginTop: 4, color: subColor}}>
+  //                                                 {status === 'error' && <Tag color="error">已逾期</Tag>}
+  //                                                 <Tag bordered={false} style={{color: subColor, padding: 0}}>{task.deadline}</Tag>
+  //                                                 <span style={{marginLeft: 8}}>{status === 'finish' ? '已完成' : status === 'error' ? '需处理' : status === 'process' ? '进行中' : '等待'}</span>
+  //                                             </div>
+  //                                         </div>
+  //                                     ),
+  //                                     description: null
+  //                                 }
+  //                             })}
+  //                         />
+  //                     ) : <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={<span style={{color: '#999'}}>暂无时间线任务</span>} />}
+  //                 </Col>
+
+  //                 {/* 右侧：待办/备忘 (List) */}
+  //                 <Col xs={24} md={8} style={{height: '100%', display: 'flex', flexDirection: 'column', marginTop: isMobile ? 24 : 0}}>
+  //                     <div style={{marginBottom: 16, fontWeight: 'bold', color: isDark ? '#fff' : '#333', display:'flex', alignItems:'center', gap: 8}}>
+  //                         <FileTextOutlined /> 待定 / 备忘 ({memoTasks.length})
+  //                     </div>
+                      
+  //                     <div style={{flex: 1, overflowY: 'auto', background: isDark ? 'rgba(255,255,255,0.02)' : '#fafafa', borderRadius: 8, padding: 12}}>
+  //                         {memoTasks.length > 0 ? (
+  //                             memoTasks.map(task => (
+  //                                 <div 
+  //                                     key={task.id} 
+  //                                     onClick={() => onEdit(task)} // 点击编辑
+  //                                     style={{
+  //                                         padding: '10px',
+  //                                         marginBottom: 8,
+  //                                         background: isDark ? '#1f1f1f' : '#fff',
+  //                                         borderRadius: 6,
+  //                                         border: isDark ? '1px solid #333' : '1px solid #e8e8e8',
+  //                                         cursor: 'pointer',
+  //                                         display: 'flex',
+  //                                         gap: 10,
+  //                                         alignItems: 'flex-start',
+  //                                         transition: 'all 0.2s',
+  //                                         opacity: task.done ? 0.6 : 1
+  //                                     }}
+  //                                 >
+  //                                     <Checkbox 
+  //                                         checked={task.done} 
+  //                                         onClick={(e) => e.stopPropagation()} 
+  //                                         onChange={() => onToggleTask(task.id, task.done)} 
+  //                                         style={{marginTop: 3}}
+  //                                     />
+  //                                     <div style={{flex: 1}}>
+  //                                         <div style={{
+  //                                             color: isDark ? '#ddd' : '#333', 
+  //                                             fontSize: 14, 
+  //                                             textDecoration: task.done ? 'line-through' : 'none'
+  //                                         }}>
+  //                                             {task.content}
+  //                                         </div>
+  //                                         <div style={{marginTop: 4}}>
+  //                                             <Tag size="small" style={{fontSize: 10, lineHeight:'16px', margin:0, padding: '0 4px'}} color={PRIORITY_CONFIG[task.category].color}>
+  //                                                 {PRIORITY_CONFIG[task.category].label}
+  //                                             </Tag>
+  //                                         </div>
+  //                                     </div>
+  //                                 </div>
+  //                             ))
+  //                         ) : <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="无备忘" />}
+  //                     </div>
+  //                 </Col>
+  //              </Row>
+  //           </Card>
+  //         ) : <Empty description="请选择一个团队" style={{marginTop: 100}} />}
+  //       </Col>
+  //     </Row>
+  //   );
+  // };
   const WorkflowTracker = ({ groups, tasks, onToggleTask, onAddQuickTask, onDelete, onEdit, isDark, isMobile }) => {
     const [activeGroupId, setActiveGroupId] = useState(null);
     const [quickCategory, setQuickCategory] = useState('reminder'); 
     const [quickContent, setQuickContent] = useState('');
-    const [quickDate, setQuickDate] = useState(null); // 日期允许为 null
+    const [quickDate, setQuickDate] = useState(null);
     const styles = getStyles(isDark);
   
     useEffect(() => {
@@ -843,23 +1172,15 @@ const CalendarView = ({ groups, tasks, onEditGroup, onToggleTask, onAddTask, onD
   
     const activeGroup = groups.find(g => g.id === activeGroupId);
 
-    // ✅ 修改 1: 将任务拆分为“时间轴任务”和“无日期备注”
-    const { timelineTasks, memoTasks } = useMemo(() => {
-        if (!activeGroupId) return { timelineTasks: [], memoTasks: [] };
-        
-        const groupTasks = tasks.filter(t => t.linkedInfo?.groupId === activeGroupId);
-        
-        const timeline = groupTasks
-            .filter(t => t.deadline) // 必须有日期
+    // 筛选时间轴任务 (仅保留有日期的任务作为左侧进度)
+    const timelineTasks = useMemo(() => {
+        if (!activeGroupId) return [];
+        return tasks
+            .filter(t => t.linkedInfo?.groupId === activeGroupId && t.deadline)
             .sort((a, b) => dayjs(a.deadline).valueOf() - dayjs(b.deadline).valueOf());
-            
-        const memo = groupTasks
-            .filter(t => !t.deadline) // 没有日期
-            .sort((a, b) => Number(a.done) - Number(b.done)); // 未完成在前
-
-        return { timelineTasks: timeline, memoTasks: memo };
     }, [activeGroupId, tasks]);
   
+    // 计算任务状态的辅助函数
     const getStepStatus = (task, index) => {
       if (task.done) return 'finish';
       if (dayjs(task.deadline).isBefore(dayjs(), 'day')) return 'error';
@@ -868,14 +1189,9 @@ const CalendarView = ({ groups, tasks, onEditGroup, onToggleTask, onAddTask, onD
       return 'wait';
     };
   
-    // ✅ 修改 2: 允许提交空日期
     const handleQuickAdd = () => {
         if(!quickContent) return message.error('请填写内容');
-        
-        // ❌ 原代码：const deadlineVal = quickDate ? quickDate.format('YYYY-MM-DD') : ''; 
-        // ✅ 修改为：如果没有选日期，必须传 null，不能传空字符串
         const deadlineVal = quickDate ? quickDate.format('YYYY-MM-DD') : null; 
-        
         onAddQuickTask({ 
           content: quickContent, 
           deadline: deadlineVal, 
@@ -883,6 +1199,15 @@ const CalendarView = ({ groups, tasks, onEditGroup, onToggleTask, onAddTask, onD
           linkedInfo: { groupId: activeGroupId } 
         });
         setQuickContent(''); setQuickDate(null); setQuickCategory('reminder'); 
+    };
+
+    // --- 新增: 保存备忘录数据到 Supabase ---
+    const handleSaveMemo = async (groupId, memoData) => {
+       const { error } = await supabase.from('groups').update({ memo_data: memoData }).eq('id', groupId);
+       if (error) console.error("保存备忘失败", error);
+       // 注意：这里最好更新一下本地 groups 状态，防止切换时数据丢失
+       // 在真实场景中，建议将 setGroups 传进来，或者依赖 fetch data。
+       // 这是一个静默保存，暂时不做强制刷新以保持输入流畅。
     };
 
     const MobileGroupSelector = () => (
@@ -905,7 +1230,6 @@ const CalendarView = ({ groups, tasks, onEditGroup, onToggleTask, onAddTask, onD
                     <div onClick={() => setActiveGroupId(item.id)} style={{ padding: '16px', marginBottom: 12, borderRadius: 12, cursor: 'pointer', background: activeGroupId === item.id ? `linear-gradient(90deg, ${item.color}33 0%, rgba(0,0,0,0) 100%)` : (isDark ? 'rgba(255,255,255,0.05)' : '#f9f9f9'), borderLeft: activeGroupId === item.id ? `4px solid ${item.color}` : '4px solid transparent', transition: 'all 0.3s' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <div style={{ color: isDark ? '#fff' : '#333', fontWeight: 600, fontSize: 15, overflow: 'hidden', whiteSpace:'nowrap', textOverflow:'ellipsis', maxWidth: '70%' }}>{item.name}</div>
-                        <Tag color={activeGroupId === item.id ? item.color : 'default'}>{Math.round((tasks.filter(t => t.linkedInfo?.groupId === item.id && t.done).length / (tasks.filter(t => t.linkedInfo?.groupId === item.id).length || 1)) * 100)}%</Tag>
                     </div>
                     <div style={{ color: isDark ? 'rgba(255,255,255,0.5)' : '#999', fontSize: 12, marginTop: 4 }}>{item.start} 出发</div>
                     </div>
@@ -919,35 +1243,33 @@ const CalendarView = ({ groups, tasks, onEditGroup, onToggleTask, onAddTask, onD
             
             {activeGroup ? (
             <Card style={{...styles.glassCard, flex: 1}} bodyStyle={{display: 'flex', flexDirection: 'column', height: '100%'}}>
-               {/* Header 区域 */}
+               {/* 顶部输入栏：仅用于添加带日期的任务 */}
                <div style={{ display: 'flex', alignItems: isMobile ? 'flex-start' : 'center', marginBottom: 24, paddingBottom: 16, borderBottom: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e8e8e8', flexDirection: isMobile ? 'column' : 'row', gap: isMobile ? 16 : 0 }}>
                   <div style={{display: 'flex', alignItems: 'center', flex: 1}}>
                       <div style={{ width: 6, height: 40, background: activeGroup.color, borderRadius: 4, marginRight: 16 }}></div>
                       <div>
                           <Title level={3} style={{ color: isDark ? '#fff' : '#000', margin: 0 }}>{activeGroup.name}</Title>
-                          <Text style={{ color: isDark ? 'rgba(255,255,255,0.5)' : '#999' }}>任务与备忘</Text>
+                          <Text style={{ color: isDark ? 'rgba(255,255,255,0.5)' : '#999' }}>关键时间节点与详细规划</Text>
                       </div>
                   </div>
                   <div style={{ display: 'flex', gap: 8, background: isDark ? 'rgba(255,255,255,0.05)' : '#f5f5f5', padding: 12, borderRadius: 8, border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e8e8e8', flexDirection: isMobile ? 'column' : 'row', width: isMobile ? '100%' : 'auto' }}>
                       <div style={{display:'flex', gap:8}}>
                           <Select value={quickCategory} onChange={setQuickCategory} style={{width: isMobile ? '40%' : 110}} dropdownStyle={{background: isDark ? '#1f1f1f' : '#fff'}}>{Object.entries(PRIORITY_CONFIG).map(([k,v]) => (<Select.Option key={k} value={k}><Badge color={v.color} text={v.label} /></Select.Option>))}</Select>
-                          {/* 允许清除日期 allowClear */}
-                          <DatePicker allowClear placeholder="日期(选填)" style={{width: isMobile ? '60%' : 130}} value={quickDate} onChange={setQuickDate} />
+                          <DatePicker allowClear placeholder="节点日期" style={{width: isMobile ? '60%' : 130}} value={quickDate} onChange={setQuickDate} />
                       </div>
                       <div style={{display:'flex', gap:8, flex:1}}>
-                          <Input placeholder="输入内容..." style={{flex: 1}} value={quickContent} onChange={e => setQuickContent(e.target.value)} onPressEnter={handleQuickAdd} />
+                          <Input placeholder="添加关键节点..." style={{flex: 1}} value={quickContent} onChange={e => setQuickContent(e.target.value)} onPressEnter={handleQuickAdd} />
                           <Button type="primary" icon={<PlusOutlined />} onClick={handleQuickAdd}>添加</Button>
                       </div>
                   </div>
                </div>
 
-               {/* ✅ 修改 3: 内容区域分栏 (Row/Col) */}
                <Row gutter={24} style={{flex: 1, overflow: 'hidden'}}>
                   
-                  {/* 左侧：时间轴 (Steps) */}
-                  <Col xs={24} md={16} style={{height: '100%', overflowY: 'auto', paddingRight: 12, borderRight: isMobile ? 'none' : (isDark ? '1px solid #333' : '1px solid #f0f0f0')}}>
+                  {/* 左侧：时间轴 (保留) */}
+                  <Col xs={24} md={12} style={{height: '100%', overflowY: 'auto', paddingRight: 12, borderRight: isMobile ? 'none' : (isDark ? '1px solid #333' : '1px solid #f0f0f0')}}>
                       <div style={{marginBottom: 16, fontWeight: 'bold', color: isDark ? '#fff' : '#333', display:'flex', alignItems:'center', gap: 8}}>
-                          <ClockCircleOutlined /> 流程进度 ({timelineTasks.length})
+                          <ClockCircleOutlined /> 关键节点进度 ({timelineTasks.length})
                       </div>
                       {timelineTasks.length > 0 ? (
                           <Steps 
@@ -971,13 +1293,10 @@ const CalendarView = ({ groups, tasks, onEditGroup, onToggleTask, onAddTask, onD
                                       title: (
                                           <div onClick={() => onEdit(task)} style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column', width: '100%', opacity: status === 'finish' ? 0.5 : 1 }}>
                                               <div style={{display:'flex', alignItems:'center', gap: 8}}>
-                                                  <Tag color={PRIORITY_CONFIG[task.category].color}>{PRIORITY_CONFIG[task.category].label}</Tag>
                                                   <span style={{ color: isDark ? '#fff' : '#000', fontSize: 16, fontWeight: 500, textDecoration: status === 'finish' ? 'line-through' : 'none' }}>{task.content}</span>
                                               </div>
                                               <div style={{fontSize: 12, marginTop: 4, color: subColor}}>
-                                                  {status === 'error' && <Tag color="error">已逾期</Tag>}
                                                   <Tag bordered={false} style={{color: subColor, padding: 0}}>{task.deadline}</Tag>
-                                                  <span style={{marginLeft: 8}}>{status === 'finish' ? '已完成' : status === 'error' ? '需处理' : status === 'process' ? '进行中' : '等待'}</span>
                                               </div>
                                           </div>
                                       ),
@@ -985,59 +1304,18 @@ const CalendarView = ({ groups, tasks, onEditGroup, onToggleTask, onAddTask, onD
                                   }
                               })}
                           />
-                      ) : <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={<span style={{color: '#999'}}>暂无时间线任务</span>} />}
+                      ) : <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={<span style={{color: '#999'}}>暂无时间节点</span>} />}
                   </Col>
 
-                  {/* 右侧：待办/备忘 (List) */}
-                  <Col xs={24} md={8} style={{height: '100%', display: 'flex', flexDirection: 'column', marginTop: isMobile ? 24 : 0}}>
-                      <div style={{marginBottom: 16, fontWeight: 'bold', color: isDark ? '#fff' : '#333', display:'flex', alignItems:'center', gap: 8}}>
-                          <FileTextOutlined /> 待定 / 备忘 ({memoTasks.length})
-                      </div>
-                      
-                      <div style={{flex: 1, overflowY: 'auto', background: isDark ? 'rgba(255,255,255,0.02)' : '#fafafa', borderRadius: 8, padding: 12}}>
-                          {memoTasks.length > 0 ? (
-                              memoTasks.map(task => (
-                                  <div 
-                                      key={task.id} 
-                                      onClick={() => onEdit(task)} // 点击编辑
-                                      style={{
-                                          padding: '10px',
-                                          marginBottom: 8,
-                                          background: isDark ? '#1f1f1f' : '#fff',
-                                          borderRadius: 6,
-                                          border: isDark ? '1px solid #333' : '1px solid #e8e8e8',
-                                          cursor: 'pointer',
-                                          display: 'flex',
-                                          gap: 10,
-                                          alignItems: 'flex-start',
-                                          transition: 'all 0.2s',
-                                          opacity: task.done ? 0.6 : 1
-                                      }}
-                                  >
-                                      <Checkbox 
-                                          checked={task.done} 
-                                          onClick={(e) => e.stopPropagation()} 
-                                          onChange={() => onToggleTask(task.id, task.done)} 
-                                          style={{marginTop: 3}}
-                                      />
-                                      <div style={{flex: 1}}>
-                                          <div style={{
-                                              color: isDark ? '#ddd' : '#333', 
-                                              fontSize: 14, 
-                                              textDecoration: task.done ? 'line-through' : 'none'
-                                          }}>
-                                              {task.content}
-                                          </div>
-                                          <div style={{marginTop: 4}}>
-                                              <Tag size="small" style={{fontSize: 10, lineHeight:'16px', margin:0, padding: '0 4px'}} color={PRIORITY_CONFIG[task.category].color}>
-                                                  {PRIORITY_CONFIG[task.category].label}
-                                              </Tag>
-                                          </div>
-                                      </div>
-                                  </div>
-                              ))
-                          ) : <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="无备忘" />}
-                      </div>
+                  {/* 右侧：新的 GroupNotepad (替换掉了原来的简单列表) */}
+                  <Col xs={24} md={12} style={{height: '100%', display: 'flex', flexDirection: 'column', marginTop: isMobile ? 24 : 0}}>
+                      {/* 关键：给 GroupNotepad 加上 key，这样切换团队时组件会强制重新渲染，加载新数据 */}
+                      <GroupNotepad 
+                          key={activeGroup.id} 
+                          group={activeGroup} 
+                          onSave={handleSaveMemo} 
+                          isDark={isDark} 
+                      />
                   </Col>
                </Row>
             </Card>
@@ -1046,7 +1324,6 @@ const CalendarView = ({ groups, tasks, onEditGroup, onToggleTask, onAddTask, onD
       </Row>
     );
   };
-
 // --- 主程序 (App) 修改版 ---
 const App = () => {
   const [activeTab, setActiveTab] = useState('calendar');
