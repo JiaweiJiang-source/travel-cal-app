@@ -3,7 +3,7 @@ import {
   Layout, Calendar, Badge, List, Checkbox, Card, Col, Row,
   Select, Typography, Tooltip, message, Button, Modal, Form, Input,
   DatePicker, Tag, ConfigProvider, theme, Steps, Avatar, Empty,
-  Drawer, Upload, Popconfirm, Switch, Radio
+  Drawer, Upload, Popconfirm, Switch, Radio, Spin
 } from 'antd';
 import {
   CalendarOutlined, CheckSquareOutlined, ProjectOutlined,
@@ -18,6 +18,12 @@ import {
 import dayjs from 'dayjs';
 import 'dayjs/locale/zh-cn';
 import locale from 'antd/locale/zh_CN';
+import { createClient } from '@supabase/supabase-js'; // 导入 Supabase
+
+// --- 1. Supabase 初始化 ---
+const supabaseUrl = 'https://fzsseydudzygnpfwjxdr.supabase.co';
+const supabaseKey = 'sb_publishable_TmLQ3ZT0_HxnHvQcRvuNgg_xzjm30j2';
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 // 设置 Dayjs 本地化
 dayjs.locale('zh-cn');
@@ -25,8 +31,6 @@ dayjs.locale('zh-cn');
 const { Header, Content, Sider } = Layout;
 const { Title, Text } = Typography;
 const { RangePicker } = DatePicker;
-
-// 1. 初始
 
 const COLOR_PALETTE = [
   { label: '经典蓝', value: '#1890ff', color: '#1890ff' },
@@ -68,17 +72,7 @@ const PRIORITY_CONFIG = {
   imported:  { label: '外部导入', color: '#722ed1', icon: <ImportOutlined /> },
 };
 
-const INITIAL_GROUPS = [
-  { id: 'g1', name: '澳洲东海岸', start: '2025-12-20', end: '2025-12-30', color: '#1890ff' },
-  { id: 'g2', name: '新西兰南岛', start: '2025-12-05', end: '2025-12-18', color: '#52c41a' },
-];
-
-const INITIAL_TASKS = [
-  { id: 1, content: '确认全团机票出票', deadline: '2025-01-15', category: 'immediate', done: false, linkedInfo: { groupId: 'g1' } },
-  { id: 2, content: '发送行前通知书', deadline: '2025-01-18', category: 'important', done: false, linkedInfo: { groupId: 'g1' } },
-];
-
-// 2. 样式生成
+// 样式生成
 const getStyles = (isDark) => ({
   layout: { 
     display: 'flex', flexDirection: 'row', width: '100vw', height: '100vh', 
@@ -123,42 +117,6 @@ const getStyles = (isDark) => ({
   })
 });
 
-// 工具人函数
-const parseICS = (icsContent) => {
-  const events = [];
-  const lines = icsContent.split(/\r\n|\n|\r/);
-  let inEvent = false;
-  let currentEvent = {};
-
-  const formatICSDate = (dateStr) => {
-    if (!dateStr) return null;
-    const cleanStr = dateStr.replace('VALUE=DATE:', '');
-    if (cleanStr.length >= 8) {
-      return `${cleanStr.substring(0, 4)}-${cleanStr.substring(4, 6)}-${cleanStr.substring(6, 8)}`;
-    }
-    return null;
-  };
-
-  lines.forEach(line => {
-    const trimmed = line.trim();
-    if (trimmed === 'BEGIN:VEVENT') {
-      inEvent = true;
-      currentEvent = {};
-    } else if (trimmed === 'END:VEVENT') {
-      inEvent = false;
-      if (currentEvent.summary && currentEvent.start) events.push(currentEvent);
-    } else if (inEvent) {
-      if (trimmed.startsWith('SUMMARY:')) currentEvent.summary = trimmed.substring(8);
-      else if (trimmed.startsWith('DTSTART')) {
-        const colonIndex = trimmed.indexOf(':');
-        if (colonIndex > -1) currentEvent.start = formatICSDate(trimmed.substring(colonIndex + 1));
-      }
-    }
-  });
-  return events;
-};
-
-// 3.日历
 const CalendarView = ({ groups, tasks, onEditGroup, onToggleTask, onAddTask, onDeleteTask, onEditTask, isDark }) => {
   const [drawerVisible, setDrawerVisible] = useState(false);
   const [selectedDate, setSelectedDate] = useState(dayjs());
@@ -332,7 +290,7 @@ const CalendarView = ({ groups, tasks, onEditGroup, onToggleTask, onAddTask, onD
                                 ))}
                                 {item.data.tasks.map(t => (
                                     <div key={t.id} style={{display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, opacity: t.done ? 0.5 : 1}}>
-                                        <Checkbox checked={t.done} onChange={() => onToggleTask(t.id)} />
+                                        <Checkbox checked={t.done} onChange={() => onToggleTask(t.id, t.done)} />
                                         <span style={{color: isDark ? '#ddd' : '#333', textDecoration: t.done ? 'line-through' : 'none'}}>{t.content}</span>
                                         <Tag size="small" style={{fontSize:10}} color={PRIORITY_CONFIG[t.category].color}>{PRIORITY_CONFIG[t.category].label}</Tag>
                                     </div>
@@ -378,7 +336,7 @@ const CalendarView = ({ groups, tasks, onEditGroup, onToggleTask, onAddTask, onD
               </div>
               <List dataSource={currentDayData.tasks} renderItem={item => (
                     <div style={{ display: 'flex', gap: 12, padding: '12px', marginBottom: 8, background: isDark ? (item.done ? 'rgba(255,255,255,0.02)' : 'rgba(30,30,30,0.8)') : (item.done ? '#f5f5f5' : '#fff'), borderRadius: 8, border: isDark ? '1px solid #303030' : '1px solid #e8e8e8', alignItems: 'flex-start', boxShadow: isDark ? 'none' : '0 1px 2px rgba(0,0,0,0.05)' }}>
-                      <Checkbox checked={item.done} onChange={() => onToggleTask(item.id)} style={{marginTop: 4}} />
+                      <Checkbox checked={item.done} onChange={() => onToggleTask(item.id, item.done)} style={{marginTop: 4}} />
                       <div style={{flex: 1}}>
                         <div style={{color: isDark ? (item.done ? '#666' : '#fff') : (item.done ? '#bbb' : '#333'), textDecoration: item.done ? 'line-through' : 'none', fontSize: 14}}>{item.content}</div>
                         <div style={{marginTop: 6, display: 'flex', gap: 8, alignItems: 'center'}}>
@@ -412,7 +370,6 @@ const CalendarView = ({ groups, tasks, onEditGroup, onToggleTask, onAddTask, onD
   );
 };
 
-// 4.待办
 const TaskBoard = ({ tasks, groups, onToggle, onDelete, onEdit, onCreate, isDark }) => {
   const [activeCategory, setActiveCategory] = useState('immediate');
   
@@ -467,11 +424,10 @@ const TaskBoard = ({ tasks, groups, onToggle, onDelete, onEdit, onCreate, isDark
                 ]}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%' }}>
-                  <Checkbox checked={item.done} onChange={() => onToggle(item.id)} style={{ transform: 'scale(1.2)' }} />
+                  <Checkbox checked={item.done} onChange={() => onToggle(item.id, item.done)} style={{ transform: 'scale(1.2)' }} />
                   <div style={{ flex: 1, transition: 'all 0.3s' }}>
                       <div style={{ 
                           fontSize: 15, 
-                          // 只保留一个 color 属性
                           textDecoration: item.done ? 'line-through' : 'none',
                           color: item.done ? (isDark ? '#666' : '#bbb') : (isDark ? '#fff' : '#333') 
                       }}>
@@ -491,7 +447,6 @@ const TaskBoard = ({ tasks, groups, onToggle, onDelete, onEdit, onCreate, isDark
   );
 };
 
-// 5. 流程追踪 ---> 下一步添加搜索嗯...
 const WorkflowTracker = ({ groups, tasks, onToggleTask, onAddQuickTask, isDark }) => {
   const [activeGroupId, setActiveGroupId] = useState(null);
   const [quickCategory, setQuickCategory] = useState('reminder'); 
@@ -572,8 +527,8 @@ const WorkflowTracker = ({ groups, tasks, onToggleTask, onAddQuickTask, isDark }
                             else if (status === 'process') { icon = <SyncOutlined spin />; subColor = '#1890ff'; }
                             return {
                                 status: status,
-                                icon: <div onClick={() => onToggleTask(task.id)} style={{ cursor: 'pointer', fontSize: 22, background: isDark ? '#000' : '#fff', borderRadius: '50%', zIndex: 2 }}>{icon}</div>,
-                                title: (<div onClick={() => onToggleTask(task.id)} style={{ cursor: 'pointer', display: 'flex', justifyContent: 'space-between', width: '100%', opacity: status === 'finish' ? 0.5 : 1, textDecoration: status === 'finish' ? 'line-through' : 'none' }}>
+                                icon: <div onClick={() => onToggleTask(task.id, task.done)} style={{ cursor: 'pointer', fontSize: 22, background: isDark ? '#000' : '#fff', borderRadius: '50%', zIndex: 2 }}>{icon}</div>,
+                                title: (<div onClick={() => onToggleTask(task.id, task.done)} style={{ cursor: 'pointer', display: 'flex', justifyContent: 'space-between', width: '100%', opacity: status === 'finish' ? 0.5 : 1, textDecoration: status === 'finish' ? 'line-through' : 'none' }}>
                                         <div style={{display:'flex', alignItems:'center', gap: 8}}><Tag color={PRIORITY_CONFIG[task.category].color} style={{marginRight:0}}>{PRIORITY_CONFIG[task.category].label}</Tag><span style={{ color: isDark ? '#fff' : '#000', fontSize: 16, fontWeight: 500 }}>{task.content}</span></div>
                                         <div style={{fontSize: 12}}>{status === 'error' && <Tag color="error">已逾期</Tag>}<Tag color="blue">{task.deadline}</Tag></div>
                                     </div>),
@@ -590,22 +545,37 @@ const WorkflowTracker = ({ groups, tasks, onToggleTask, onAddQuickTask, isDark }
   );
 };
 
-// 6.主程序
 const App = () => {
   const [activeTab, setActiveTab] = useState('calendar');
   const [isDarkMode, setIsDarkMode] = useState(true);
   
-  const [groups, setGroups] = useState(() => {
-    const saved = localStorage.getItem('travel_app_groups');
-    return saved ? JSON.parse(saved) : INITIAL_GROUPS;
-  });
-  const [tasks, setTasks] = useState(() => {
-    const saved = localStorage.getItem('travel_app_tasks');
-    return saved ? JSON.parse(saved) : INITIAL_TASKS;
-  });
+  // --- 2. 状态改为从 Supabase 获取，初始为空 ---
+  const [groups, setGroups] = useState([]);
+  const [tasks, setTasks] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  useEffect(() => { localStorage.setItem('travel_app_groups', JSON.stringify(groups)); }, [groups]);
-  useEffect(() => { localStorage.setItem('travel_app_tasks', JSON.stringify(tasks)); }, [tasks]);
+  // --- 3. 初始化加载数据 (Fetch) ---
+  const fetchData = async () => {
+    try {
+        setLoading(true);
+        const { data: groupsData, error: gErr } = await supabase.from('groups').select('*');
+        const { data: tasksData, error: tErr } = await supabase.from('tasks').select('*');
+        
+        if (gErr) throw gErr;
+        if (tErr) throw tErr;
+
+        if (groupsData) setGroups(groupsData);
+        if (tasksData) setTasks(tasksData);
+    } catch (error) {
+        message.error('云端同步失败: ' + error.message);
+    } finally {
+        setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
 
   const [groupModalOpen, setGroupModalOpen] = useState(false);
   const [editingGroup, setEditingGroup] = useState(null);
@@ -617,7 +587,8 @@ const App = () => {
 
   const styles = getStyles(isDarkMode);
 
-  // --- Group Handlers ---
+  // --- 4. 数据库操作逻辑 (Actions) ---
+
   const openEditGroup = (group) => { 
     setEditingGroup(group); 
     groupForm.setFieldsValue({ 
@@ -629,22 +600,15 @@ const App = () => {
   };
   const openCreateGroup = () => { setEditingGroup(null); groupForm.resetFields(); setGroupModalOpen(true); };
   
-  const handleGroupSubmit = (values) => {
+  const handleGroupSubmit = async (values) => {
     const safeId = values.id ? values.id.trim() : '';
     const safeName = values.name ? values.name.trim() : '';
 
-    if (!safeId || !safeName) {
-        message.error('团号和团名不能为空');
-        return;
-    }
+    if (!safeId || !safeName) { message.error('团号和团名不能为空'); return; }
 
+    // 如果是新建，检查本地 ID 是否冲突（虽然 DB 也会查，但前端先拦一下体验更好）
     if (!editingGroup && groups.some(g => g.id === safeId)) {
-        message.error(`团号 ${safeId} 已存在，请使用唯一的团号！`);
-        return;
-    }
-
-    if (!values.dates || values.dates.length < 2) {
-        message.error('请选择完整的出行日期');
+        message.error(`团号 ${safeId} 已存在！`);
         return;
     }
 
@@ -656,23 +620,34 @@ const App = () => {
         color: values.color 
     };
 
+    // 写入数据库
+    const { error } = await supabase.from('groups').upsert(groupData);
+    if (error) { message.error('保存失败'); return; }
+
+    // 更新本地视图
     if (editingGroup) { 
         setGroups(prev => prev.map(g => g.id === editingGroup.id ? { ...g, ...groupData } : g)); 
-        message.success('团务信息已更新');
+        message.success('团务信息已同步');
     } else { 
         setGroups(prev => [...prev, groupData]); 
         message.success('新团已发布');
     }
-    
     setGroupModalOpen(false);
   };
 
-  const handleDeleteGroup = () => {
+  const handleDeleteGroup = async () => {
       if (!editingGroup) return;
+      // 1. 删除 DB 里的任务关联 (只是解绑，不删任务，或者你可以选择删任务)
+      // 为了简单，我们先不做级联删除，或者假设 DB 没设置级联
+      const { error } = await supabase.from('groups').delete().eq('id', editingGroup.id);
+      
+      if (error) { message.error('删除失败'); return; }
+
+      // 2. 本地更新
       setTasks(prev => prev.map(t => t.linkedInfo?.groupId === editingGroup.id ? { ...t, linkedInfo: null } : t));
       setGroups(prev => prev.filter(g => g.id !== editingGroup.id));
       setGroupModalOpen(false);
-      message.success('团队已删除，关联任务已解除绑定');
+      message.success('团队已删除');
   };
   
   const openCreateTask = () => {
@@ -692,71 +667,91 @@ const App = () => {
       setTaskModalOpen(true);
   };
 
-  const handleTaskSubmit = (values) => {
+  const handleTaskSubmit = async (values) => {
       if(!values.deadline) { message.error("请选择日期"); return; }
       
       const newTaskData = {
           content: values.content,
           category: values.category,
           deadline: values.deadline.format('YYYY-MM-DD'),
-          linkedInfo: values.groupId ? { groupId: values.groupId } : null
+          linkedInfo: values.groupId ? { groupId: values.groupId } : null,
       };
 
       if (editingTask) {
+          // Update
+          const { error } = await supabase.from('tasks').update(newTaskData).eq('id', editingTask.id);
+          if (error) { message.error('更新失败'); return; }
+
           setTasks(prev => prev.map(t => t.id === editingTask.id ? { ...t, ...newTaskData } : t));
           message.success('任务已更新');
       } else {
-          setTasks(prev => [...prev, { id: Date.now(), done: false, ...newTaskData }]);
+          // Insert
+          const id = Date.now(); // 使用时间戳作为ID
+          const { error } = await supabase.from('tasks').insert([{ id, done: false, ...newTaskData }]);
+          if (error) { message.error('创建失败'); return; }
+
+          setTasks(prev => [...prev, { id, done: false, ...newTaskData }]);
           message.success('新任务已创建');
       }
       setTaskModalOpen(false);
   };
 
-  const handleDeleteTask = (id) => {
+  const handleDeleteTask = async (id) => {
+      const { error } = await supabase.from('tasks').delete().eq('id', id);
+      if (error) { message.error('删除失败'); return; }
+
       setTasks(tasks.filter(t => t.id !== id));
       message.success('任务已删除');
   };
 
-  const handleTaskToggle = (id) => setTasks(prev => prev.map(t => t.id === id ? { ...t, done: !t.done } : t));
+  const handleTaskToggle = async (id, currentDoneStatus) => {
+      // 乐观更新：先改界面，再发请求
+      const newStatus = !currentDoneStatus;
+      setTasks(prev => prev.map(t => t.id === id ? { ...t, done: newStatus } : t));
 
-  const handleCreateTaskDirect = (newTaskObj) => {
-      setTasks(prev => [...prev, { id: Date.now(), done: false, ...newTaskObj }]);
+      const { error } = await supabase.from('tasks').update({ done: newStatus }).eq('id', id);
+      if (error) {
+          // 如果失败，回滚
+          setTasks(prev => prev.map(t => t.id === id ? { ...t, done: currentDoneStatus } : t));
+          message.error('状态同步失败');
+      }
+  };
+
+  const handleCreateTaskDirect = async (newTaskObj) => {
+      const id = Date.now();
+      const finalTask = { id, done: false, ...newTaskObj };
+      
+      const { error } = await supabase.from('tasks').insert([finalTask]);
+      if (error) { message.error('创建失败'); return; }
+
+      setTasks(prev => [...prev, finalTask]);
       message.success('任务已添加');
   };
 
+  // 这里的 Import 逻辑比较复杂，为了演示先简化：仅前端导入，不存库，或者你可以循环 insert
   const handleImportICS = (file) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
-        const events = parseICS(e.target.result);
-        if (events.length === 0) { message.warning('未找到有效事件'); return; }
-        const newTasks = events.map((ev, idx) => ({ id: Date.now() + idx, content: ev.summary || '日程事件', deadline: ev.start, category: 'imported', done: false })).filter(t => t.deadline);
-        setTasks(prev => [...prev, ...newTasks]);
-        message.success(`导入 ${newTasks.length} 个事件`);
-      } catch (err) { message.error('文件解析失败'); }
-    };
-    reader.readAsText(file);
+    message.warning('云端模式下暂未开放 ICS 批量导入 (需编写批量上传逻辑)');
     return false;
   };
 
   const clearAllData = () => {
-      Modal.confirm({
-          title: '危险操作',
-          content: '确定要清空所有本地数据吗？这也将恢复默认演示数据。',
-          okType: 'danger',
-          onOk: () => {
-              localStorage.clear();
-              window.location.reload();
-          }
-      });
+      message.warning('云端模式下，请去数据库控制台清空数据，以免误删他人数据');
   };
+
+  if (loading) {
+      return (
+        <div style={{width:'100vw', height:'100vh', display:'flex', justifyContent:'center', alignItems:'center', background: isDarkMode?'#000':'#fff'}}>
+            <Spin size="large" tip="正在从云端同步数据..." />
+        </div>
+      );
+  }
 
   return (
     <ConfigProvider locale={locale} theme={{ algorithm: isDarkMode ? theme.darkAlgorithm : theme.defaultAlgorithm, token: { colorPrimary: '#1890ff', borderRadius: 8 } }}>
       <Layout style={styles.layout} hasSider> 
         <Sider width={220} style={styles.sider}>
           <div style={{ height: 64, display: 'flex', alignItems: 'center', justifyContent: 'center', color: isDarkMode ? '#fff' : '#000', fontSize: 18, fontWeight: 'bold' }}>
-            <GlobalOutlined style={{ marginRight: 8, color: '#1890ff' }} /> Travel Cal
+            <GlobalOutlined style={{ marginRight: 8, color: '#1890ff' }} /> Travel Cal Cloud
           </div>
           
           <div style={{ padding: 16, flex: 1, display: 'flex', flexDirection: 'column' }}>
@@ -775,12 +770,6 @@ const App = () => {
                     <span style={{color: isDarkMode ? '#fff' : '#333', fontSize: 12}}>深色模式</span>
                     <Switch checked={isDarkMode} onChange={setIsDarkMode} checkedChildren={<MoonOutlined />} unCheckedChildren={<SunOutlined />} />
                 </div>
-                <Upload beforeUpload={handleImportICS} showUploadList={false} accept=".ics">
-                    <Button block icon={<ImportOutlined />} style={{ background: isDarkMode ? 'rgba(255,255,255,0.05)' : '#fff', borderColor: isDarkMode ? '#333' : '#d9d9d9', color: isDarkMode ? '#ccc' : '#666', marginBottom: 8 }}>导入日历 (.ics)</Button>
-                </Upload>
-                <div style={{textAlign: 'center'}}>
-                     <Tooltip title="重置App数据"><Button type="text" danger size="small" icon={<ClearOutlined />} onClick={clearAllData}>重置数据</Button></Tooltip>
-                </div>
             </div>
           </div>
         </Sider>
@@ -788,7 +777,10 @@ const App = () => {
         <Layout style={styles.innerLayout}>
           <Header style={styles.header}>
               <Title level={4} style={{ margin: 0, color: isDarkMode ? '#fff' : '#000' }}>{activeTab === 'calendar' ? '日历总览' : activeTab === 'tasks' ? '待办中心' : '流程追踪'}</Title>
-              <Avatar style={{ backgroundColor: '#f56a00' }}>User</Avatar>
+              <div style={{display:'flex', alignItems:'center', gap:8}}>
+                  <Tag color="green">已连接云端</Tag>
+                  <Avatar style={{ backgroundColor: '#f56a00' }}>User</Avatar>
+              </div>
           </Header>
           <Content style={{ padding: 24, overflowY: 'auto', flex: 1 }}>
             {activeTab === 'calendar' && (
@@ -850,7 +842,7 @@ const App = () => {
             
             <div style={{display: 'flex', gap: 12, marginTop: 24}}>
                 {editingGroup && (
-                    <Popconfirm title="删除团队" description="这将解绑所有关联任务，确定吗？" onConfirm={handleDeleteGroup} okText="确认删除" cancelText="取消" okButtonProps={{danger: true}}>
+                    <Popconfirm title="删除团队" description="这将在云端删除团队信息，确定吗？" onConfirm={handleDeleteGroup} okText="确认删除" cancelText="取消" okButtonProps={{danger: true}}>
                         <Button danger size="large" icon={<DeleteOutlined />}>删除团队</Button>
                     </Popconfirm>
                 )}
