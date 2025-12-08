@@ -402,9 +402,17 @@ const CalendarView = ({ groups, tasks, onEditGroup, onToggleTask, onAddTask, onD
               <div 
                 className="calendar-cell-scroll"
                 style={{ 
-                    display: 'flex', flexDirection: 'column', gap: 2, flex: 1, overflowY: 'auto', minHeight: 0 
+                    display: 'flex', 
+                    flexDirection: 'column', 
+                    gap: 2, 
+                    flex: 1, 
+                    overflowY: 'auto', // 必须保留
+                    minHeight: 0,
+                    paddingBottom: 4   // 稍微加点底部内边距，滚动到底更舒服
                 }}
-                onWheel={(e) => e.stopPropagation()}
+                // ❌ 移除这一行： onWheel={(e) => e.stopPropagation()} 
+                // ✅ 原因：CSS 的 overscroll-behavior: contain 已经完美解决了这个问题
+                // 移除后，滚轮的物理惯性就不会被 JS 强行打断了。
               >
               {sortedTasks.map(t => (
                   <div key={t.id} style={styles.taskText(t.done, t.category)}>
@@ -450,7 +458,16 @@ const CalendarView = ({ groups, tasks, onEditGroup, onToggleTask, onAddTask, onD
         {/* 添加全局 CSS 隐藏滚动条但保留功能 */}
         <style>{`
             .calendar-cell-scroll::-webkit-scrollbar { display: none; }
-            .calendar-cell-scroll { -ms-overflow-style: none; scrollbar-width: none; }
+            .calendar-cell-scroll { 
+                -ms-overflow-style: none; 
+                scrollbar-width: none; 
+                
+                /* 关键 1: 阻止滚动链，滚动到底部时不会触发父级滚动，避免"撞墙感" */
+                overscroll-behavior: contain; 
+                
+                /* 关键 2: 开启平滑惯性滚动 (iOS/Trackpad) */
+                -webkit-overflow-scrolling: touch;
+            }
         `}</style>
 
         <Card 
