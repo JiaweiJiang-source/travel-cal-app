@@ -307,11 +307,18 @@ const CalendarView = ({ groups, tasks, onEditGroup, onToggleTask, onAddTask, onD
 
     // ✅ 修复2：实现 Apple Calendar 风格的内部滚动
     // ✅ 核心修改：将团队信息移出滚动区，固定在顶部
+    // ✅ 核心修改：增加排序逻辑 (未完成在前，已完成在后)
     const dateCellRender = useCallback((value) => {
       const dateStr = value.format('YYYY-MM-DD');
       const dayData = dataMap[dateStr]; 
       const holiday = HOLIDAYS[dateStr];
       const holidayStyle = holiday ? getHolidayColors(holiday.country, isDark) : null;
+
+      // 🔄 排序：复制一份数组进行排序，避免污染原数据
+      // 逻辑：Number(false) is 0, Number(true) is 1. a-b 升序会导致 0(未完成) 排在 1(已完成) 前面
+      const sortedTasks = dayData?.tasks 
+          ? [...dayData.tasks].sort((a, b) => Number(a.done) - Number(b.done)) 
+          : [];
   
       return (
         <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
@@ -334,7 +341,7 @@ const CalendarView = ({ groups, tasks, onEditGroup, onToggleTask, onAddTask, onD
             </div>
           )}
 
-          {/* 2. 团队列表 (关键修改: flexShrink: 0 保证它不会被挤压，且不在滚动条内) */}
+          {/* 2. 团队列表 (固定) */}
           {dayData && dayData.groups.length > 0 && (
             <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 2, marginBottom: 4 }}>
               {dayData.groups.map(g => (
@@ -345,24 +352,19 @@ const CalendarView = ({ groups, tasks, onEditGroup, onToggleTask, onAddTask, onD
             </div>
           )}
 
-          {/* 3. 任务列表 (关键修改: 只有这里设置了 overflowY: 'auto'，多任务时只滚动这里) */}
-          {dayData && dayData.tasks.length > 0 && (
+          {/* 3. 任务列表 (滚动 + 排序后) */}
+          {sortedTasks.length > 0 && (
               <div 
                 className="calendar-cell-scroll"
                 style={{ 
-                    display: 'flex', 
-                    flexDirection: 'column', 
-                    gap: 2, 
-                    flex: 1,                 // 占据剩余所有空间
-                    overflowY: 'auto',       // 仅任务区域滚动
-                    minHeight: 0             // 防止 Flex 子元素溢出 bug
+                    display: 'flex', flexDirection: 'column', gap: 2, flex: 1, overflowY: 'auto', minHeight: 0 
                 }}
                 onWheel={(e) => e.stopPropagation()}
               >
-              {dayData.tasks.map(t => (
+              {sortedTasks.map(t => (
                   <div key={t.id} style={styles.taskText(t.done, t.category)}>
                     <div style={{minWidth: 6, width: 6, height: 6, borderRadius: 2, background: PRIORITY_CONFIG[t.category].color, flexShrink: 0}}></div>
-                    <span style={{overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis'}}>{t.content}</span>
+                    <span style={{overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis', opacity: t.done ? 0.6 : 1}}>{t.content}</span>
                   </div>
               ))}
               </div>
@@ -370,7 +372,7 @@ const CalendarView = ({ groups, tasks, onEditGroup, onToggleTask, onAddTask, onD
         </div>
       );
     }, [dataMap, onEditGroup, styles, isDark]);
-  
+
     const handleDrawerQuickAdd = () => {
       if (!newTaskContent.trim()) { message.warning('请输入任务内容'); return; }
       onAddTask({
@@ -546,18 +548,24 @@ const CalendarView = ({ groups, tasks, onEditGroup, onToggleTask, onAddTask, onD
                 <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12}}>
                   <div style={{color: isDark ? 'rgba(255,255,255,0.5)' : '#999', fontSize: 13, textTransform: 'uppercase', letterSpacing: 1}}>截止任务 ({currentDayData.tasks.length})</div>
                 </div>
-                <List dataSource={currentDayData.tasks} renderItem={item => {
+                {/* ✅ 修改：在这里加入 .sort()，让未完成的任务排在前面 */}
+                <List 
+                    dataSource={[...currentDayData.tasks].sort((a, b) => Number(a.done) - Number(b.done))} 
+                    renderItem={item => {
                       const linkedGroup = item.linkedInfo ? groups.find(g => g.id === item.linkedInfo.groupId) : null;
                       return (
                       <div style={{ display: 'flex', gap: 12, padding: '12px', marginBottom: 8, background: isDark ? (item.done ? 'rgba(255,255,255,0.02)' : 'rgba(30,30,30,0.8)') : (item.done ? '#f5f5f5' : '#fff'), borderRadius: 8, border: isDark ? '1px solid #303030' : '1px solid #e8e8e8', alignItems: 'flex-start', boxShadow: isDark ? 'none' : '0 1px 2px rgba(0,0,0,0.05)' }}>
+                        {/* Checkbox */}
                         <Checkbox checked={item.done} onChange={() => onToggleTask(item.id, item.done)} style={{marginTop: 4}} />
-                        <div style={{flex: 1}}>
+                        
+                        <div style={{flex: 1, opacity: item.done ? 0.5 : 1, transition: 'opacity 0.3s'}}> {/* 增加透明度变化 */}
                           <div style={{color: isDark ? (item.done ? '#666' : '#fff') : (item.done ? '#bbb' : '#333'), textDecoration: item.done ? 'line-through' : 'none', fontSize: 14}}>{item.content}</div>
                           <div style={{marginTop: 6, display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap'}}>
                             <Tag bordered={false} color={PRIORITY_CONFIG[item.category].color} style={{margin:0, fontSize:10, lineHeight:'16px', padding: '0 4px'}}>{PRIORITY_CONFIG[item.category].label}</Tag>
                             {item.linkedInfo && <span style={{fontSize: 10, color: '#1890ff', display: 'flex', alignItems: 'center', gap: 2, cursor: 'pointer', maxWidth: 150, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}><LinkOutlined/> {linkedGroup ? linkedGroup.name : '未知团务'}</span>}
                           </div>
                         </div>
+
                         <div style={{display: 'flex', gap: 4}}>
                            <Tooltip title="编辑"><Button type="text" size="small" icon={<EditOutlined style={{color: '#1890ff'}} />} onClick={()=>onEditTask(item)} /></Tooltip>
                            <Popconfirm title="删除任务" description="确定要删除这个任务吗？" onConfirm={() => onDeleteTask(item.id)} okText="删除" cancelText="取消" okButtonProps={{danger: true}}>
