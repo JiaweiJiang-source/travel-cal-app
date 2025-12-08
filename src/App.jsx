@@ -837,170 +837,175 @@ const CalendarView = ({ groups, tasks, onEditGroup, onToggleTask, onAddTask, onD
     );
   };
   
-  const WorkflowTracker = ({ groups, tasks, onToggleTask, onAddQuickTask, isDark, isMobile }) => {
-    const [activeGroupId, setActiveGroupId] = useState(null);
-    const [quickCategory, setQuickCategory] = useState('reminder'); 
-    const [quickContent, setQuickContent] = useState('');
-    const [quickDate, setQuickDate] = useState(null);
-    const styles = getStyles(isDark);
-  
-    useEffect(() => {
-      if (groups.length > 0 && (!activeGroupId || !groups.find(g => g.id === activeGroupId))) {
-        setActiveGroupId(groups[0].id);
-      }
-    }, [groups, activeGroupId]);
-  
-    const activeGroup = groups.find(g => g.id === activeGroupId);
-    const sortedWorkflow = useMemo(() => {
-      if (!activeGroupId) return [];
-      return tasks.filter(t => t.linkedInfo?.groupId === activeGroupId).sort((a, b) => dayjs(a.deadline).valueOf() - dayjs(b.deadline).valueOf());
-    }, [activeGroupId, tasks]);
-  
-    const getStepStatus = (task, index) => {
-      if (task.done) return 'finish';
-      if (dayjs(task.deadline).isBefore(dayjs(), 'day')) return 'error';
-      const firstUndoneIndex = sortedWorkflow.findIndex(t => !t.done);
-      if (index === firstUndoneIndex) return 'process';
-      return 'wait';
-    };
-  
-    const handleQuickAdd = () => {
-        if(!quickContent || !quickDate) return message.error('请填写内容和日期');
-        onAddQuickTask({ 
-          content: quickContent, 
-          deadline: quickDate.format('YYYY-MM-DD'), 
-          category: quickCategory, 
-          linkedInfo: { groupId: activeGroupId } 
-        });
-        setQuickContent(''); setQuickDate(null); setQuickCategory('reminder'); 
-    };
+  // 1. 在参数里解构出 onDelete 和 onEdit
+  const WorkflowTracker = ({ groups, tasks, onToggleTask, onAddQuickTask, onDelete, onEdit, isDark, isMobile }) => {
+      const [activeGroupId, setActiveGroupId] = useState(null);
+      const [quickCategory, setQuickCategory] = useState('reminder'); 
+      const [quickContent, setQuickContent] = useState('');
+      const [quickDate, setQuickDate] = useState(null);
+      const styles = getStyles(isDark);
+    
+      useEffect(() => {
+        if (groups.length > 0 && (!activeGroupId || !groups.find(g => g.id === activeGroupId))) {
+          setActiveGroupId(groups[0].id);
+        }
+      }, [groups, activeGroupId]);
+    
+      const activeGroup = groups.find(g => g.id === activeGroupId);
+      const sortedWorkflow = useMemo(() => {
+        if (!activeGroupId) return [];
+        return tasks.filter(t => t.linkedInfo?.groupId === activeGroupId).sort((a, b) => dayjs(a.deadline).valueOf() - dayjs(b.deadline).valueOf());
+      }, [activeGroupId, tasks]);
+    
+      const getStepStatus = (task, index) => {
+        if (task.done) return 'finish';
+        if (dayjs(task.deadline).isBefore(dayjs(), 'day')) return 'error';
+        const firstUndoneIndex = sortedWorkflow.findIndex(t => !t.done);
+        if (index === firstUndoneIndex) return 'process';
+        return 'wait';
+      };
+    
+      const handleQuickAdd = () => {
+          if(!quickContent || !quickDate) return message.error('请填写内容和日期');
+          onAddQuickTask({ 
+            content: quickContent, 
+            deadline: quickDate.format('YYYY-MM-DD'), 
+            category: quickCategory, 
+            linkedInfo: { groupId: activeGroupId } 
+          });
+          setQuickContent(''); setQuickDate(null); setQuickCategory('reminder'); 
+      };
 
-    // Mobile specific: Horizontal scrollable group selector
-    const MobileGroupSelector = () => (
-        <div style={{
-            display: 'flex', 
-            overflowX: 'auto', 
-            gap: 12, 
-            padding: '4px 0 12px 0', 
-            marginBottom: 8,
-            scrollbarWidth: 'none'
-        }}>
-            {groups.map(item => (
-                <div 
-                    key={item.id} 
-                    onClick={() => setActiveGroupId(item.id)}
-                    style={{
-                        padding: '8px 16px',
-                        borderRadius: 20,
-                        background: activeGroupId === item.id ? item.color : (isDark ? '#1f1f1f' : '#f0f0f0'),
-                        color: activeGroupId === item.id ? '#fff' : (isDark ? '#aaa' : '#666'),
-                        whiteSpace: 'nowrap',
-                        fontSize: 14,
-                        fontWeight: 500,
-                        boxShadow: activeGroupId === item.id ? '0 2px 6px rgba(0,0,0,0.2)' : 'none',
-                        transition: 'all 0.3s'
-                    }}
-                >
-                    {item.name}
+      const MobileGroupSelector = () => (
+          <div style={{ display: 'flex', overflowX: 'auto', gap: 12, padding: '4px 0 12px 0', marginBottom: 8, scrollbarWidth: 'none' }}>
+              {groups.map(item => (
+                  <div key={item.id} onClick={() => setActiveGroupId(item.id)}
+                      style={{ padding: '8px 16px', borderRadius: 20, background: activeGroupId === item.id ? item.color : (isDark ? '#1f1f1f' : '#f0f0f0'), color: activeGroupId === item.id ? '#fff' : (isDark ? '#aaa' : '#666'), whiteSpace: 'nowrap', fontSize: 14, fontWeight: 500, boxShadow: activeGroupId === item.id ? '0 2px 6px rgba(0,0,0,0.2)' : 'none', transition: 'all 0.3s' }}>
+                      {item.name}
+                  </div>
+              ))}
+          </div>
+      );
+    
+      return (
+        <Row gutter={[16, 16]} style={{ height: '100%' }}>
+          {!isMobile && (
+              <Col xs={24} md={6} style={{height: '100%'}}>
+              <Card style={{...styles.glassCard, height: '100%', overflowY: 'auto'}} title={<span style={{color: isDark ? '#fff' : '#000'}}>团队列表</span>}>
+                  <List dataSource={groups} renderItem={item => (
+                      <div onClick={() => setActiveGroupId(item.id)} style={{ padding: '16px', marginBottom: 12, borderRadius: 12, cursor: 'pointer', background: activeGroupId === item.id ? `linear-gradient(90deg, ${item.color}33 0%, rgba(0,0,0,0) 100%)` : (isDark ? 'rgba(255,255,255,0.05)' : '#f9f9f9'), borderLeft: activeGroupId === item.id ? `4px solid ${item.color}` : '4px solid transparent', transition: 'all 0.3s' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <div style={{ color: isDark ? '#fff' : '#333', fontWeight: 600, fontSize: 15, overflow: 'hidden', whiteSpace:'nowrap', textOverflow:'ellipsis', maxWidth: '70%' }}>{item.name}</div>
+                          <Tag color={activeGroupId === item.id ? item.color : 'default'}>{Math.round((tasks.filter(t => t.linkedInfo?.groupId === item.id && t.done).length / (tasks.filter(t => t.linkedInfo?.groupId === item.id).length || 1)) * 100)}%</Tag>
+                      </div>
+                      <div style={{ color: isDark ? 'rgba(255,255,255,0.5)' : '#999', fontSize: 12, marginTop: 4 }}>{item.start} 出发</div>
+                      </div>
+                  )} />
+              </Card>
+              </Col>
+          )}
+
+          <Col xs={24} md={18} style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+              {isMobile && <MobileGroupSelector />}
+              
+              {activeGroup ? (
+              <Card style={{...styles.glassCard, flex: 1}} bodyStyle={{display: 'flex', flexDirection: 'column', height: '100%'}}>
+                {/* 顶部标题区保持不变 */}
+                <div style={{ display: 'flex', alignItems: isMobile ? 'flex-start' : 'center', marginBottom: 24, paddingBottom: 16, borderBottom: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e8e8e8', flexDirection: isMobile ? 'column' : 'row', gap: isMobile ? 16 : 0 }}>
+                    <div style={{display: 'flex', alignItems: 'center', flex: 1}}>
+                        <div style={{ width: 6, height: 40, background: activeGroup.color, borderRadius: 4, marginRight: 16 }}></div>
+                        <div><Title level={3} style={{ color: isDark ? '#fff' : '#000', margin: 0 }}>{activeGroup.name}</Title><Text style={{ color: isDark ? 'rgba(255,255,255,0.5)' : '#999' }}>任务流 (根据Deadline自动排序)</Text></div>
+                    </div>
+                    <div style={{ display: 'flex', gap: 8, background: isDark ? 'rgba(255,255,255,0.05)' : '#f5f5f5', padding: 12, borderRadius: 8, border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e8e8e8', flexDirection: isMobile ? 'column' : 'row', width: isMobile ? '100%' : 'auto' }}>
+                        <div style={{display:'flex', gap:8}}><Select value={quickCategory} onChange={setQuickCategory} style={{width: isMobile ? '40%' : 110}} dropdownStyle={{background: isDark ? '#1f1f1f' : '#fff'}}>{Object.entries(PRIORITY_CONFIG).map(([k,v]) => (<Select.Option key={k} value={k}><Badge color={v.color} text={v.label} /></Select.Option>))}</Select><DatePicker placeholder="截止日" style={{width: isMobile ? '60%' : 130}} value={quickDate} onChange={setQuickDate} /></div>
+                        <div style={{display:'flex', gap:8, flex:1}}><Input placeholder="输入任务内容..." style={{flex: 1}} value={quickContent} onChange={e => setQuickContent(e.target.value)} onPressEnter={handleQuickAdd} /><Button type="primary" icon={<PlusOutlined />} onClick={handleQuickAdd}>添加</Button></div>
+                    </div>
                 </div>
-            ))}
-        </div>
-    );
-  
-    return (
-      <Row gutter={[16, 16]} style={{ height: '100%' }}>
-        {/* PC Sidebar / Mobile Hidden */}
-        {!isMobile && (
-            <Col xs={24} md={6} style={{height: '100%'}}>
-            <Card style={{...styles.glassCard, height: '100%', overflowY: 'auto'}} title={<span style={{color: isDark ? '#fff' : '#000'}}>团队列表</span>}>
-                <List dataSource={groups} renderItem={item => (
-                    <div onClick={() => setActiveGroupId(item.id)} style={{ padding: '16px', marginBottom: 12, borderRadius: 12, cursor: 'pointer', background: activeGroupId === item.id ? `linear-gradient(90deg, ${item.color}33 0%, rgba(0,0,0,0) 100%)` : (isDark ? 'rgba(255,255,255,0.05)' : '#f9f9f9'), borderLeft: activeGroupId === item.id ? `4px solid ${item.color}` : '4px solid transparent', transition: 'all 0.3s' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <div style={{ color: isDark ? '#fff' : '#333', fontWeight: 600, fontSize: 15, overflow: 'hidden', whiteSpace:'nowrap', textOverflow:'ellipsis', maxWidth: '70%' }}>{item.name}</div>
-                        <Tag color={activeGroupId === item.id ? item.color : 'default'}>{Math.round((tasks.filter(t => t.linkedInfo?.groupId === item.id && t.done).length / (tasks.filter(t => t.linkedInfo?.groupId === item.id).length || 1)) * 100)}%</Tag>
-                    </div>
-                    <div style={{ color: isDark ? 'rgba(255,255,255,0.5)' : '#999', fontSize: 12, marginTop: 4 }}>{item.start} 出发</div>
-                    </div>
-                )} />
-            </Card>
-            </Col>
-        )}
 
-        <Col xs={24} md={18} style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-            {isMobile && <MobileGroupSelector />}
-            
-            {activeGroup ? (
-            <Card style={{...styles.glassCard, flex: 1}} bodyStyle={{display: 'flex', flexDirection: 'column', height: '100%'}}>
-               <div style={{ 
-                   display: 'flex', 
-                   alignItems: isMobile ? 'flex-start' : 'center', 
-                   marginBottom: 24, 
-                   paddingBottom: 16, 
-                   borderBottom: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e8e8e8', 
-                   flexDirection: isMobile ? 'column' : 'row', 
-                   gap: isMobile ? 16 : 0 
-                }}>
-                  <div style={{display: 'flex', alignItems: 'center', flex: 1}}>
-                      <div style={{ width: 6, height: 40, background: activeGroup.color, borderRadius: 4, marginRight: 16 }}></div>
-                      <div>
-                        <Title level={3} style={{ color: isDark ? '#fff' : '#000', margin: 0 }}>{activeGroup.name}</Title>
-                        <Text style={{ color: isDark ? 'rgba(255,255,255,0.5)' : '#999' }}>任务流 (根据Deadline自动排序)</Text>
-                      </div>
-                  </div>
-                  
-                  {/* Quick Add Section */}
-                  <div style={{
-                      display: 'flex', 
-                      gap: 8, 
-                      background: isDark ? 'rgba(255,255,255,0.05)' : '#f5f5f5', 
-                      padding: 12, 
-                      borderRadius: 8, 
-                      border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e8e8e8', 
-                      flexDirection: isMobile ? 'column' : 'row', 
-                      width: isMobile ? '100%' : 'auto'
-                  }}>
-                      <div style={{display:'flex', gap:8}}>
-                          <Select value={quickCategory} onChange={setQuickCategory} style={{width: isMobile ? '40%' : 110}} dropdownStyle={{background: isDark ? '#1f1f1f' : '#fff'}}>{Object.entries(PRIORITY_CONFIG).map(([k,v]) => (<Select.Option key={k} value={k}><Badge color={v.color} text={v.label} /></Select.Option>))}</Select>
-                          <DatePicker placeholder="截止日" style={{width: isMobile ? '60%' : 130}} value={quickDate} onChange={setQuickDate} />
-                      </div>
-                      <div style={{display:'flex', gap:8, flex:1}}>
-                           <Input placeholder="输入任务内容..." style={{flex: 1}} value={quickContent} onChange={e => setQuickContent(e.target.value)} onPressEnter={handleQuickAdd} />
-                           <Button type="primary" icon={<PlusOutlined />} onClick={handleQuickAdd}>添加</Button>
-                      </div>
-                  </div>
-               </div>
+                <div style={{flex: 1, overflowY: 'auto', paddingRight: 10, paddingBottom: 20}}>
+                    {sortedWorkflow.length > 0 ? (
+                        <Steps 
+                          direction="vertical" 
+                          current={-1} 
+                          items={sortedWorkflow.map((task, index) => {
+                                const status = getStepStatus(task, index);
+                                let icon = <ClockCircleOutlined />;
+                                let subColor = '#999';
+                                if (status === 'finish') { icon = <CheckCircleOutlined />; subColor = '#52c41a'; }
+                                else if (status === 'error') { icon = <ExclamationCircleOutlined />; subColor = '#ff4d4f'; }
+                                else if (status === 'process') { icon = <SyncOutlined spin />; subColor = '#1890ff'; }
+                                
+                                return {
+                                    status: status,
+                                    // 图标点击切换状态
+                                    icon: <div onClick={() => onToggleTask(task.id, task.done)} style={{ cursor: 'pointer', fontSize: 22, background: isDark ? '#000' : '#fff', borderRadius: '50%', zIndex: 2 }}>{icon}</div>,
+                                    title: (
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', width: '100%', gap: 8 }}>
+                                            {/* 左侧：内容点击切换状态 */}
+                                            <div 
+                                              onClick={() => onToggleTask(task.id, task.done)} 
+                                              style={{ 
+                                                  cursor: 'pointer', flex: 1, 
+                                                  opacity: status === 'finish' ? 0.5 : 1, 
+                                                  textDecoration: status === 'finish' ? 'line-through' : 'none' 
+                                              }}
+                                            >
+                                                <div style={{display:'flex', alignItems:'center', gap: 8, flexWrap: 'wrap'}}>
+                                                    <Tag color={PRIORITY_CONFIG[task.category].color} style={{marginRight:0}}>{PRIORITY_CONFIG[task.category].label}</Tag>
+                                                    <span style={{ color: isDark ? '#fff' : '#000', fontSize: 16, fontWeight: 500 }}>{task.content}</span>
+                                                </div>
+                                                <div style={{fontSize: 12, marginTop: 4, color: subColor}}>
+                                                    {status === 'error' && <Tag color="error" style={{marginRight: 4}}>已逾期</Tag>}
+                                                    <Tag bordered={false} style={{color: subColor, padding: 0}}>{task.deadline}</Tag>
+                                                    <span style={{marginLeft: 8}}>{status === 'finish' ? '已完成' : status === 'error' ? '需立即处理' : status === 'process' ? '正在进行' : '等待中'}</span>
+                                                </div>
+                                            </div>
 
-               <div style={{flex: 1, overflowY: 'auto', paddingRight: 10, paddingBottom: 20}}>
-                  {sortedWorkflow.length > 0 ? (
-                      <Steps 
-                        direction="vertical" 
-                        current={-1} 
-                        items={sortedWorkflow.map((task, index) => {
-                              const status = getStepStatus(task, index);
-                              let icon = <ClockCircleOutlined />;
-                              let subColor = '#999';
-                              if (status === 'finish') { icon = <CheckCircleOutlined />; subColor = '#52c41a'; }
-                              else if (status === 'error') { icon = <ExclamationCircleOutlined />; subColor = '#ff4d4f'; }
-                              else if (status === 'process') { icon = <SyncOutlined spin />; subColor = '#1890ff'; }
-                              return {
-                                  status: status,
-                                  icon: <div onClick={() => onToggleTask(task.id, task.done)} style={{ cursor: 'pointer', fontSize: 22, background: isDark ? '#000' : '#fff', borderRadius: '50%', zIndex: 2 }}>{icon}</div>,
-                                  title: (<div onClick={() => onToggleTask(task.id, task.done)} style={{ cursor: 'pointer', display: 'flex', justifyContent: 'space-between', width: '100%', opacity: status === 'finish' ? 0.5 : 1, textDecoration: status === 'finish' ? 'line-through' : 'none', flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'flex-start' : 'center', gap: isMobile ? 4 : 0 }}>
-                                          <div style={{display:'flex', alignItems:'center', gap: 8}}><Tag color={PRIORITY_CONFIG[task.category].color} style={{marginRight:0}}>{PRIORITY_CONFIG[task.category].label}</Tag><span style={{ color: isDark ? '#fff' : '#000', fontSize: 16, fontWeight: 500 }}>{task.content}</span></div>
-                                          <div style={{fontSize: 12}}>{status === 'error' && <Tag color="error">已逾期</Tag>}<Tag color="blue">{task.deadline}</Tag></div>
-                                      </div>),
-                                  description: <div style={{color: subColor, fontSize: 12, marginTop: 4}}>{status === 'finish' ? '已完成' : status === 'error' ? '需立即处理' : status === 'process' ? '正在进行' : '等待中'}</div>
-                              }
-                          })}
-                      />
-                  ) : <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={<span style={{color: '#999'}}>暂无任务，请在上方添加</span>} style={{marginTop: 60}} />}
-               </div>
-            </Card>
-          ) : <Empty description="请选择一个团队" style={{marginTop: 100}} />}
-        </Col>
-      </Row>
-    );
-  };
+                                            {/* 右侧：操作按钮组 (新增) */}
+                                            <div style={{ display: 'flex', gap: 2, flexShrink: 0 }}>
+                                                <Tooltip title="编辑">
+                                                    <Button 
+                                                      type="text" 
+                                                      size="small" 
+                                                      icon={<EditOutlined style={{color: isDark ? '#177ddc' : '#1890ff'}} />} 
+                                                      onClick={(e) => { 
+                                                          e.stopPropagation(); // 阻止冒泡，防止触发任务完成切换
+                                                          onEdit(task); 
+                                                      }} 
+                                                    />
+                                                </Tooltip>
+                                                <Popconfirm 
+                                                    title="删除节点" 
+                                                    description="确定要移除这个任务节点吗？" 
+                                                    onConfirm={(e) => { 
+                                                        e?.stopPropagation(); 
+                                                        onDelete(task.id); 
+                                                    }} 
+                                                    onCancel={(e) => e?.stopPropagation()}
+                                                    okText="删除" 
+                                                    cancelText="取消" 
+                                                    okButtonProps={{danger: true}}
+                                                    placement="topRight"
+                                                >
+                                                    <div onClick={(e) => e.stopPropagation()}> {/* Popconfirm 的触发器也需要阻止冒泡 */}
+                                                        <Button type="text" size="small" danger icon={<DeleteOutlined />} />
+                                                    </div>
+                                                </Popconfirm>
+                                            </div>
+                                        </div>
+                                    ),
+                                    description: null // 将原本在 description 里的信息移到了 title 里，为了布局更好看
+                                }
+                            })}
+                        />
+                    ) : <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={<span style={{color: '#999'}}>暂无任务，请在上方添加</span>} style={{marginTop: 60}} />}
+                </div>
+              </Card>
+            ) : <Empty description="请选择一个团队" style={{marginTop: 100}} />}
+          </Col>
+        </Row>
+      );
+    };
 
 // --- 主程序 (App) 修改版 ---
 const App = () => {
@@ -1294,7 +1299,19 @@ const App = () => {
               />
             )}
             {activeTab === 'tasks' && <TaskBoard tasks={tasks} groups={groups} onToggle={handleTaskToggle} onDelete={handleDeleteTask} onEdit={openEditTask} onCreate={openCreateTask} isDark={isDarkMode} isMobile={isMobile} />}
-            {activeTab === 'workflow' && <WorkflowTracker groups={groups} tasks={tasks} onToggleTask={handleTaskToggle} onAddQuickTask={handleCreateTaskDirect} isDark={isDarkMode} isMobile={isMobile} />}
+            {activeTab === 'workflow' && (
+                <WorkflowTracker 
+                    groups={groups} 
+                    tasks={tasks} 
+                    onToggleTask={handleTaskToggle} 
+                    onAddQuickTask={handleCreateTaskDirect} 
+                    // 新增下面这两个 props
+                    onDelete={handleDeleteTask}
+                    onEdit={openEditTask}
+                    isDark={isDarkMode} 
+                    isMobile={isMobile} 
+                />
+            )}
           </Content>
         </Layout>
         
