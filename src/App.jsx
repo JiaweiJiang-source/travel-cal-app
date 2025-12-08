@@ -306,6 +306,7 @@ const CalendarView = ({ groups, tasks, onEditGroup, onToggleTask, onAddTask, onD
     };
 
     // ✅ 修复2：实现 Apple Calendar 风格的内部滚动
+    // ✅ 核心修改：将团队信息移出滚动区，固定在顶部
     const dateCellRender = useCallback((value) => {
       const dateStr = value.format('YYYY-MM-DD');
       const dayData = dataMap[dateStr]; 
@@ -315,7 +316,7 @@ const CalendarView = ({ groups, tasks, onEditGroup, onToggleTask, onAddTask, onD
       return (
         <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
           
-          {/* 节日显示 */}
+          {/* 1. 节日显示 (固定) */}
           {holiday && (
             <div style={{ marginBottom: 2, textAlign: 'center', flexShrink: 0 }}>
                <Tag 
@@ -325,7 +326,6 @@ const CalendarView = ({ groups, tasks, onEditGroup, onToggleTask, onAddTask, onD
                     background: holidayStyle.bg,
                     color: holidayStyle.text,
                     borderRadius: 4,
-                    transition: 'all 0.3s'
                   }}
                >
                  <span style={{marginRight: 4}}>{holiday.country === 'AU' ? '🇦🇺' : '🇨🇳'}</span>
@@ -334,31 +334,31 @@ const CalendarView = ({ groups, tasks, onEditGroup, onToggleTask, onAddTask, onD
             </div>
           )}
 
-          {/* 关键修改：内容区域设置为 flex:1 和 overflow-y: auto
-             这允许格子内部滚动，而不是被 slice 截断。
-             并添加 CSS 隐藏滚动条样式。
-          */}
-          {dayData && (
+          {/* 2. 团队列表 (关键修改: flexShrink: 0 保证它不会被挤压，且不在滚动条内) */}
+          {dayData && dayData.groups.length > 0 && (
+            <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 2, marginBottom: 4 }}>
+              {dayData.groups.map(g => (
+                  <Tooltip title={`点击修改: ${g.name}`} key={g.id}>
+                    <div style={styles.eventBar(g.color)} onClick={(e) => { e.stopPropagation(); onEditGroup(g); }}>{g.name}</div>
+                  </Tooltip>
+              ))}
+            </div>
+          )}
+
+          {/* 3. 任务列表 (关键修改: 只有这里设置了 overflowY: 'auto'，多任务时只滚动这里) */}
+          {dayData && dayData.tasks.length > 0 && (
               <div 
                 className="calendar-cell-scroll"
                 style={{ 
                     display: 'flex', 
                     flexDirection: 'column', 
                     gap: 2, 
-                    marginTop: holiday ? 2 : 4,
-                    flex: 1,                 // 占据剩余空间
-                    overflowY: 'auto',       // 允许内部垂直滚动
-                    minHeight: 0             // Firefox Flex bug fix
+                    flex: 1,                 // 占据剩余所有空间
+                    overflowY: 'auto',       // 仅任务区域滚动
+                    minHeight: 0             // 防止 Flex 子元素溢出 bug
                 }}
-                onWheel={(e) => e.stopPropagation()} // 防止滚动内部时切换月份
+                onWheel={(e) => e.stopPropagation()}
               >
-              {dayData.groups.map(g => (
-                  <Tooltip title={`点击修改: ${g.name}`} key={g.id}>
-                    <div style={styles.eventBar(g.color)} onClick={(e) => { e.stopPropagation(); onEditGroup(g); }}>{g.name}</div>
-                  </Tooltip>
-              ))}
-              
-              {/* 移除了 .slice(0, 3) 限制，显示所有任务 */}
               {dayData.tasks.map(t => (
                   <div key={t.id} style={styles.taskText(t.done, t.category)}>
                     <div style={{minWidth: 6, width: 6, height: 6, borderRadius: 2, background: PRIORITY_CONFIG[t.category].color, flexShrink: 0}}></div>
@@ -369,7 +369,7 @@ const CalendarView = ({ groups, tasks, onEditGroup, onToggleTask, onAddTask, onD
           )}
         </div>
       );
-    }, [dataMap, onEditGroup, styles, isDark]); 
+    }, [dataMap, onEditGroup, styles, isDark]);
   
     const handleDrawerQuickAdd = () => {
       if (!newTaskContent.trim()) { message.warning('请输入任务内容'); return; }
