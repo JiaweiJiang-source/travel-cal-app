@@ -469,12 +469,17 @@ const CalendarView = ({ groups, tasks, onEditGroup, onToggleTask, onAddTask, onD
                   />
               ) : (
                   <div style={{padding: isMobile ? '16px' : '20px 40px'}}>
-                      {listData.length > 0 ? listData.map((item, idx) => (
+                      {listData.length > 0 ? listData.map((item, idx) => {
+                          // 🔄 1. 这里加排序逻辑：未完成(0)在前，已完成(1)在后
+                          const sortedTasks = [...item.data.tasks].sort((a, b) => Number(a.done) - Number(b.done));
+                          
+                          return (
                           <div key={idx} style={{
                               display: isMobile ? 'block' : 'flex',
                               marginBottom: 24, 
                               gap: isMobile ? 0 : 24
                           }}>
+                              {/* 左侧：日期显示 */}
                               <div style={{
                                   width: isMobile ? '100%' : 80, 
                                   textAlign: isMobile ? 'left' : 'center', 
@@ -491,28 +496,79 @@ const CalendarView = ({ groups, tasks, onEditGroup, onToggleTask, onAddTask, onD
                                   {!isMobile && <div style={{fontSize: 12, color: isDark ? '#666' : '#bbb'}}>{item.date.format('M月')}</div>}
                                   {item.holiday && <Tag color="red" style={{marginLeft: isMobile ? 'auto' : 0, marginTop: isMobile ? 0 : 8}}>{item.holiday.name}</Tag>}
                               </div>
+
+                              {/* 右侧：内容区域 */}
                               <div style={{
                                   flex: 1, 
                                   borderLeft: !isMobile ? (isDark ? '1px solid #333' : '1px solid #e8e8e8') : 'none', 
                                   paddingLeft: isMobile ? 0 : 24
                               }}>
+                                  {/* 显示当天的旅行团 */}
                                   {item.data.groups.map(g => (
                                       <div key={g.id} onClick={() => onEditGroup(g)} style={{padding: '12px', background: isDark ? '#1f1f1f' : '#f9f9f9', borderRadius: 8, borderLeft: `4px solid ${g.color}`, marginBottom: 8, cursor: 'pointer'}}>
                                           <div style={{fontWeight: 'bold', color: isDark ? '#fff' : '#333'}}>{g.name}</div>
                                           <div style={{fontSize: 12, color: '#888'}}>{g.start} ~ {g.end}</div>
                                       </div>
                                   ))}
-                                  {item.data.tasks.map(t => (
-                                      <div key={t.id} style={{display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, padding: '8px', background: isDark ? '#1a1a1a' : '#fff', borderRadius: 6, border: isDark ? '1px solid #333' : '1px solid #f0f0f0', opacity: t.done ? 0.5 : 1}}>
-                                          <Checkbox checked={t.done} onChange={() => onToggleTask(t.id, t.done)} />
-                                          <span style={{color: isDark ? '#ddd' : '#333', textDecoration: t.done ? 'line-through' : 'none', flex: 1}}>{t.content}</span>
-                                          <Tag size="small" style={{fontSize:10, marginRight:0}} color={PRIORITY_CONFIG[t.category].color}>{PRIORITY_CONFIG[t.category].label}</Tag>
+
+                                  {/* 显示当天的任务 (已排序) */}
+                                  {sortedTasks.map(t => {
+                                      // 🔍 2. 查找关联团信息
+                                      const linkedGroup = t.linkedInfo ? groups.find(g => g.id === t.linkedInfo.groupId) : null;
+                                      
+                                      return (
+                                      <div key={t.id} style={{
+                                          display: 'flex', 
+                                          alignItems: 'flex-start', // 改为顶部对齐，防止多行时错位
+                                          gap: 12, 
+                                          marginBottom: 8, 
+                                          padding: '8px 12px', 
+                                          background: isDark ? '#1a1a1a' : '#fff', 
+                                          borderRadius: 8, 
+                                          border: isDark ? '1px solid #333' : '1px solid #f0f0f0', 
+                                          opacity: t.done ? 0.5 : 1, // 已完成变半透明
+                                          transition: 'all 0.3s'
+                                      }}>
+                                          <Checkbox checked={t.done} onChange={() => onToggleTask(t.id, t.done)} style={{marginTop: 3}} />
+                                          
+                                          <div style={{flex: 1}}>
+                                              {/* 任务内容 */}
+                                              <div style={{
+                                                  color: isDark ? '#ddd' : '#333', 
+                                                  textDecoration: t.done ? 'line-through' : 'none', 
+                                                  fontSize: 14,
+                                                  lineHeight: 1.5
+                                              }}>
+                                                  {t.content}
+                                              </div>
+                                              
+                                              {/* 任务元数据 (优先级 + 关联团) */}
+                                              <div style={{display: 'flex', gap: 8, marginTop: 4, alignItems: 'center', flexWrap: 'wrap'}}>
+                                                  <Tag size="small" style={{fontSize:10, margin:0, padding: '0 4px', lineHeight: '16px'}} color={PRIORITY_CONFIG[t.category].color}>
+                                                      {PRIORITY_CONFIG[t.category].label}
+                                                  </Tag>
+                                                  
+                                                  {/* 🔗 显示关联团 */}
+                                                  {linkedGroup && (
+                                                      <span style={{
+                                                          fontSize: 11, 
+                                                          color: isDark ? '#177ddc' : '#1890ff', 
+                                                          display: 'flex', 
+                                                          alignItems: 'center', 
+                                                          gap: 4
+                                                      }}>
+                                                          <RocketOutlined /> {linkedGroup.name}
+                                                      </span>
+                                                  )}
+                                              </div>
+                                          </div>
                                       </div>
-                                  ))}
-                                  {item.data.groups.length === 0 && item.data.tasks.length === 0 && <div style={{color: isDark ? '#444' : '#eee', fontSize: 12}}>无日程</div>}
+                                  )})}
+                                  
+                                  {item.data.groups.length === 0 && sortedTasks.length === 0 && <div style={{color: isDark ? '#444' : '#eee', fontSize: 12}}>无日程</div>}
                               </div>
                           </div>
-                      )) : <Empty description="未来60天无安排" />}
+                      )}) : <Empty description="未来60天无安排" />}
                   </div>
               )}
           </div>
