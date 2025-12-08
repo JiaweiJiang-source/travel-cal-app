@@ -694,11 +694,23 @@ const App = () => {
   };
   const openCreateGroup = () => { setEditingGroup(null); groupForm.resetFields(); setGroupModalOpen(true); };
   
+  // ✅ 修复后的 handleGroupSubmit
   const handleGroupSubmit = async (values) => {
-    const safeId = values.id ? values.id.trim() : '';
+    // 修复点 1: 优先读取 editingGroup 中的 ID。
+    // 因为当 Input disabled 时，values.id 有时会丢失或未定义。
+    const safeId = editingGroup ? editingGroup.id : (values.id ? values.id.trim() : '');
     const safeName = values.name ? values.name.trim() : '';
 
-    if (!safeId || !safeName) { message.error('团号和团名不能为空'); return; }
+    if (!safeId || !safeName) { 
+        message.error('团号和团名不能为空'); 
+        return; 
+    }
+    
+    // 修复点 2: 增加空值保护，防止日期未选择时崩溃
+    if (!values.dates || values.dates.length < 2) {
+        message.error('请选择完整的出行日期');
+        return;
+    }
 
     const groupData = { 
         id: safeId, 
@@ -706,19 +718,28 @@ const App = () => {
         start: values.dates[0].format('YYYY-MM-DD'), 
         end: values.dates[1].format('YYYY-MM-DD'), 
         color: values.color,
-        user_id: session.user.id // 关键：标记主人
+        user_id: session.user.id
     };
 
+    // 乐观更新：先不等待数据库，直接尝试更新后端
     const { error } = await supabase.from('groups').upsert(groupData);
-    if (error) { message.error('保存失败: ' + error.message); return; }
+    
+    if (error) { 
+        console.error('Supabase Error:', error); // 方便在控制台调试
+        message.error('保存失败: ' + error.message); 
+        return; 
+    }
 
     if (editingGroup) { 
-        setGroups(prev => prev.map(g => g.id === editingGroup.id ? { ...g, ...groupData } : g)); 
-        message.success('团务信息已同步');
+        // 更新模式
+        setGroups(prev => prev.map(g => g.id === safeId ? { ...g, ...groupData } : g)); 
+        message.success('团务信息已更新');
     } else { 
+        // 创建模式
         setGroups(prev => [...prev, groupData]); 
         message.success('新团已发布');
     }
+    
     setGroupModalOpen(false);
   };
 
