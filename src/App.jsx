@@ -1171,8 +1171,19 @@ const App = () => {
   };
   
   const handleSignOut = async () => {
-      await supabase.auth.signOut();
-      message.success('已退出登录');
+      // 1. 执行 Supabase 的退出逻辑
+      const { error } = await supabase.auth.signOut();
+      
+      if (error) {
+          message.error('退出失败: ' + error.message);
+      } else {
+          // 2. 关键：手动强制清空当前 Session 和数据
+          // 这样无论 onAuthStateChange 是否触发，UI 都会立即切换到登录页
+          setSession(null);
+          setGroups([]);
+          setTasks([]);
+          message.success('已退出登录');
+      }
   };
 
   if (!session) {
