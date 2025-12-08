@@ -1358,10 +1358,6 @@ const App = () => {
             </div>
           </Form>
         </Modal>
-
-
-        // ... inside App component return statement
-
         <Modal 
             title={editingTask ? "编辑任务" : "新建任务"} 
             open={taskModalOpen} 
@@ -1370,40 +1366,40 @@ const App = () => {
             destroyOnClose 
             width={isMobile ? '90%' : 520}
         >
-          <Form form={taskForm} onFinish={handleTaskSubmit} layout="vertical">
-              {/* ... 之前的 Form.Item 内容保持不变 ... */}
-              <Form.Item name="content" label="任务内容" rules={[{ required: true }]}><Input placeholder="例如: 确认机票出票" onPressEnter={() => taskForm.submit()} /></Form.Item>
-              <Row gutter={16}>
-                  <Col span={12}><Form.Item name="category" label="优先级" initialValue="reminder"><Select>{Object.entries(PRIORITY_CONFIG).map(([k, v]) => <Select.Option key={k} value={k}>{v.label}</Select.Option>)}</Select></Form.Item></Col>
-                  <Col span={12}><Form.Item name="deadline" label="截止日期" rules={[{required: true}]}><DatePicker style={{width:'100%'}} /></Form.Item></Col>
-              </Row>
-              <Form.Item name="groupId" label="关联团 (可选)"><Select allowClear>{groups.map(g => <Select.Option key={g.id} value={g.id}>{g.name}</Select.Option>)}</Select></Form.Item>
-              
-              {/* ✅ 修改底部按钮区域：添加删除按钮 */}
-              <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 24}}>
-                  <div>
-                      {editingTask && (
-                          <Popconfirm 
-                              title="删除任务" 
-                              description="确定要永久删除这个任务吗？" 
-                              onConfirm={() => {
-                                  handleDeleteTask(editingTask.id);
-                                  setTaskModalOpen(false); // 删除后关闭弹窗
-                              }} 
-                              okText="删除" 
-                              cancelText="再想想" 
-                              okButtonProps={{danger: true}}
-                          >
-                              <Button danger type="dashed" icon={<DeleteOutlined />}>删除任务</Button>
-                          </Popconfirm>
-                      )}
-                  </div>
-                  <div style={{display: 'flex', gap: 10}}>
-                      <Button onClick={() => setTaskModalOpen(false)}>取消</Button>
-                      <Button type="primary" htmlType="submit">{editingTask ? "保存修改" : "立即创建"}</Button>
-                  </div>
-              </div>
-            </Form>
+        <Form form={taskForm} onFinish={handleTaskSubmit} layout="vertical">
+            {/* ... 之前的 Form.Item 内容保持不变 ... */}
+            <Form.Item name="content" label="任务内容" rules={[{ required: true }]}><Input placeholder="例如: 确认机票出票" onPressEnter={() => taskForm.submit()} /></Form.Item>
+            <Row gutter={16}>
+                <Col span={12}><Form.Item name="category" label="优先级" initialValue="reminder"><Select>{Object.entries(PRIORITY_CONFIG).map(([k, v]) => <Select.Option key={k} value={k}>{v.label}</Select.Option>)}</Select></Form.Item></Col>
+                <Col span={12}><Form.Item name="deadline" label="截止日期" rules={[{required: true}]}><DatePicker style={{width:'100%'}} /></Form.Item></Col>
+            </Row>
+            <Form.Item name="groupId" label="关联团 (可选)"><Select allowClear>{groups.map(g => <Select.Option key={g.id} value={g.id}>{g.name}</Select.Option>)}</Select></Form.Item>
+            
+            {/* ✅ 修改底部按钮区域：添加删除按钮 */}
+            <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 24}}>
+                <div>
+                    {editingTask && (
+                        <Popconfirm 
+                            title="删除任务" 
+                            description="确定要永久删除这个任务吗？" 
+                            onConfirm={() => {
+                                handleDeleteTask(editingTask.id);
+                                setTaskModalOpen(false); // 删除后关闭弹窗
+                            }} 
+                            okText="删除" 
+                            cancelText="再想想" 
+                            okButtonProps={{danger: true}}
+                        >
+                            <Button danger type="dashed" icon={<DeleteOutlined />}>删除任务</Button>
+                        </Popconfirm>
+                    )}
+                </div>
+                <div style={{display: 'flex', gap: 10}}>
+                    <Button onClick={() => setTaskModalOpen(false)}>取消</Button>
+                    <Button type="primary" htmlType="submit">{editingTask ? "保存修改" : "立即创建"}</Button>
+                </div>
+            </div>
+        </Form>
         </Modal>
       </Layout>
     </ConfigProvider>
