@@ -924,6 +924,8 @@ const CalendarView = ({ groups, tasks, onEditGroup, onToggleTask, onAddTask, onD
 
                 <div style={{flex: 1, overflowY: 'auto', paddingRight: 10, paddingBottom: 20}}>
                     {sortedWorkflow.length > 0 ? (
+                        //
+                        // ... inside WorkflowTracker component
                         <Steps 
                           direction="vertical" 
                           current={-1} 
@@ -931,70 +933,66 @@ const CalendarView = ({ groups, tasks, onEditGroup, onToggleTask, onAddTask, onD
                                 const status = getStepStatus(task, index);
                                 let icon = <ClockCircleOutlined />;
                                 let subColor = '#999';
+                                
+                                // 状态图标逻辑保持不变
                                 if (status === 'finish') { icon = <CheckCircleOutlined />; subColor = '#52c41a'; }
                                 else if (status === 'error') { icon = <ExclamationCircleOutlined />; subColor = '#ff4d4f'; }
                                 else if (status === 'process') { icon = <SyncOutlined spin />; subColor = '#1890ff'; }
                                 
                                 return {
                                     status: status,
-                                    // 图标点击切换状态
-                                    icon: <div onClick={() => onToggleTask(task.id, task.done)} style={{ cursor: 'pointer', fontSize: 22, background: isDark ? '#000' : '#fff', borderRadius: '50%', zIndex: 2 }}>{icon}</div>,
+                                    // 1. 图标点击：依然保留“切换完成状态”的功能
+                                    icon: (
+                                        <div 
+                                            onClick={(e) => {
+                                                e.stopPropagation(); // 阻止冒泡，防止触发文字区的编辑事件
+                                                onToggleTask(task.id, task.done);
+                                            }} 
+                                            style={{ cursor: 'pointer', fontSize: 22, background: isDark ? '#000' : '#fff', borderRadius: '50%', zIndex: 2 }}
+                                        >
+                                            {icon}
+                                        </div>
+                                    ),
+                                    
+                                    // 2. 标题点击：改为“打开编辑窗口”
                                     title: (
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', width: '100%', gap: 8 }}>
-                                            {/* 左侧：内容点击切换状态 */}
-                                            <div 
-                                              onClick={() => onToggleTask(task.id, task.done)} 
-                                              style={{ 
-                                                  cursor: 'pointer', flex: 1, 
-                                                  opacity: status === 'finish' ? 0.5 : 1, 
-                                                  textDecoration: status === 'finish' ? 'line-through' : 'none' 
-                                              }}
-                                            >
-                                                <div style={{display:'flex', alignItems:'center', gap: 8, flexWrap: 'wrap'}}>
-                                                    <Tag color={PRIORITY_CONFIG[task.category].color} style={{marginRight:0}}>{PRIORITY_CONFIG[task.category].label}</Tag>
-                                                    <span style={{ color: isDark ? '#fff' : '#000', fontSize: 16, fontWeight: 500 }}>{task.content}</span>
-                                                </div>
-                                                <div style={{fontSize: 12, marginTop: 4, color: subColor}}>
-                                                    {status === 'error' && <Tag color="error" style={{marginRight: 4}}>已逾期</Tag>}
-                                                    <Tag bordered={false} style={{color: subColor, padding: 0}}>{task.deadline}</Tag>
-                                                    <span style={{marginLeft: 8}}>{status === 'finish' ? '已完成' : status === 'error' ? '需立即处理' : status === 'process' ? '正在进行' : '等待中'}</span>
-                                                </div>
+                                        <div 
+                                          // 这里改为 onEdit，点击整行文字即弹出编辑框
+                                          onClick={() => onEdit(task)} 
+                                          style={{ 
+                                              cursor: 'pointer', 
+                                              display: 'flex', 
+                                              flexDirection: 'column',
+                                              width: '100%', 
+                                              opacity: status === 'finish' ? 0.5 : 1, 
+                                              // 增加一个hover效果提示可点击 (可选)
+                                              transition: 'opacity 0.2s'
+                                          }}
+                                        >
+                                            <div style={{display:'flex', alignItems:'center', gap: 8, flexWrap: 'wrap'}}>
+                                                <Tag color={PRIORITY_CONFIG[task.category].color} style={{marginRight:0}}>
+                                                    {PRIORITY_CONFIG[task.category].label}
+                                                </Tag>
+                                                <span style={{ 
+                                                    color: isDark ? '#fff' : '#000', 
+                                                    fontSize: 16, 
+                                                    fontWeight: 500,
+                                                    textDecoration: status === 'finish' ? 'line-through' : 'none'
+                                                }}>
+                                                    {task.content}
+                                                </span>
                                             </div>
-
-                                            {/* 右侧：操作按钮组 (新增) */}
-                                            <div style={{ display: 'flex', gap: 2, flexShrink: 0 }}>
-                                                <Tooltip title="编辑">
-                                                    <Button 
-                                                      type="text" 
-                                                      size="small" 
-                                                      icon={<EditOutlined style={{color: isDark ? '#177ddc' : '#1890ff'}} />} 
-                                                      onClick={(e) => { 
-                                                          e.stopPropagation(); // 阻止冒泡，防止触发任务完成切换
-                                                          onEdit(task); 
-                                                      }} 
-                                                    />
-                                                </Tooltip>
-                                                <Popconfirm 
-                                                    title="删除节点" 
-                                                    description="确定要移除这个任务节点吗？" 
-                                                    onConfirm={(e) => { 
-                                                        e?.stopPropagation(); 
-                                                        onDelete(task.id); 
-                                                    }} 
-                                                    onCancel={(e) => e?.stopPropagation()}
-                                                    okText="删除" 
-                                                    cancelText="取消" 
-                                                    okButtonProps={{danger: true}}
-                                                    placement="topRight"
-                                                >
-                                                    <div onClick={(e) => e.stopPropagation()}> {/* Popconfirm 的触发器也需要阻止冒泡 */}
-                                                        <Button type="text" size="small" danger icon={<DeleteOutlined />} />
-                                                    </div>
-                                                </Popconfirm>
+                                            
+                                            <div style={{fontSize: 12, marginTop: 4, color: subColor}}>
+                                                {status === 'error' && <Tag color="error" style={{marginRight: 4}}>已逾期</Tag>}
+                                                <Tag bordered={false} style={{color: subColor, padding: 0}}>{task.deadline}</Tag>
+                                                <span style={{marginLeft: 8}}>
+                                                    {status === 'finish' ? '已完成' : status === 'error' ? '需立即处理' : status === 'process' ? '正在进行' : '等待中'}
+                                                </span>
                                             </div>
                                         </div>
                                     ),
-                                    description: null // 将原本在 description 里的信息移到了 title 里，为了布局更好看
+                                    description: null
                                 }
                             })}
                         />
@@ -1361,21 +1359,52 @@ const App = () => {
           </Form>
         </Modal>
 
-        <Modal title={editingTask ? "编辑任务" : "新建任务"} open={taskModalOpen} onCancel={() => setTaskModalOpen(false)} footer={null} destroyOnClose width={isMobile ? '90%' : 520}>
-         <Form form={taskForm} onFinish={handleTaskSubmit} layout="vertical">
-            <Form.Item name="content" label="任务内容" rules={[{ required: true }]}><Input placeholder="例如: 确认机票出票" onPressEnter={() => taskForm.submit()} /></Form.Item>
-            <Row gutter={16}>
-                <Col span={12}><Form.Item name="category" label="优先级" initialValue="reminder"><Select>{Object.entries(PRIORITY_CONFIG).map(([k, v]) => <Select.Option key={k} value={k}>{v.label}</Select.Option>)}</Select></Form.Item></Col>
-                <Col span={12}><Form.Item name="deadline" label="截止日期" rules={[{required: true}]}><DatePicker style={{width:'100%'}} /></Form.Item></Col>
-            </Row>
-            <Form.Item name="groupId" label="关联团 (可选)"><Select allowClear>{groups.map(g => <Select.Option key={g.id} value={g.id}>{g.name}</Select.Option>)}</Select></Form.Item>
-            <div style={{display: 'flex', justifyContent: 'flex-end', gap: 10}}>
-                <Button onClick={() => setTaskModalOpen(false)}>取消</Button>
-                <Button type="primary" htmlType="submit">{editingTask ? "保存" : "创建"}</Button>
-            </div>
-         </Form>
-        </Modal>
 
+        // ... inside App component return statement
+
+        <Modal 
+            title={editingTask ? "编辑任务" : "新建任务"} 
+            open={taskModalOpen} 
+            onCancel={() => setTaskModalOpen(false)} 
+            footer={null} 
+            destroyOnClose 
+            width={isMobile ? '90%' : 520}
+        >
+          <Form form={taskForm} onFinish={handleTaskSubmit} layout="vertical">
+              {/* ... 之前的 Form.Item 内容保持不变 ... */}
+              <Form.Item name="content" label="任务内容" rules={[{ required: true }]}><Input placeholder="例如: 确认机票出票" onPressEnter={() => taskForm.submit()} /></Form.Item>
+              <Row gutter={16}>
+                  <Col span={12}><Form.Item name="category" label="优先级" initialValue="reminder"><Select>{Object.entries(PRIORITY_CONFIG).map(([k, v]) => <Select.Option key={k} value={k}>{v.label}</Select.Option>)}</Select></Form.Item></Col>
+                  <Col span={12}><Form.Item name="deadline" label="截止日期" rules={[{required: true}]}><DatePicker style={{width:'100%'}} /></Form.Item></Col>
+              </Row>
+              <Form.Item name="groupId" label="关联团 (可选)"><Select allowClear>{groups.map(g => <Select.Option key={g.id} value={g.id}>{g.name}</Select.Option>)}</Select></Form.Item>
+              
+              {/* ✅ 修改底部按钮区域：添加删除按钮 */}
+              <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 24}}>
+                  <div>
+                      {editingTask && (
+                          <Popconfirm 
+                              title="删除任务" 
+                              description="确定要永久删除这个任务吗？" 
+                              onConfirm={() => {
+                                  handleDeleteTask(editingTask.id);
+                                  setTaskModalOpen(false); // 删除后关闭弹窗
+                              }} 
+                              okText="删除" 
+                              cancelText="再想想" 
+                              okButtonProps={{danger: true}}
+                          >
+                              <Button danger type="dashed" icon={<DeleteOutlined />}>删除任务</Button>
+                          </Popconfirm>
+                      )}
+                  </div>
+                  <div style={{display: 'flex', gap: 10}}>
+                      <Button onClick={() => setTaskModalOpen(false)}>取消</Button>
+                      <Button type="primary" htmlType="submit">{editingTask ? "保存修改" : "立即创建"}</Button>
+                  </div>
+              </div>
+            </Form>
+        </Modal>
       </Layout>
     </ConfigProvider>
   );
