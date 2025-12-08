@@ -264,17 +264,23 @@ const CalendarView = ({ groups, tasks, onEditGroup, onToggleTask, onAddTask, onD
       );
     }, [dataMap, onEditGroup, styles, isDark]); 
   
+    // ✅ 修复后的 handleDrawerQuickAdd
     const handleDrawerQuickAdd = () => {
       if (!newTaskContent.trim()) { message.warning('请输入任务内容'); return; }
+      
       onAddTask({
         content: newTaskContent,
         deadline: selectedDate.format('YYYY-MM-DD'),
         category: newTaskCategory,
-        groupId: newTaskGroupId
+        // 修复：将 groupId 包装进 linkedInfo 对象，与数据库结构保持一致
+        linkedInfo: newTaskGroupId ? { groupId: newTaskGroupId } : null
       });
+      
       setNewTaskContent('');
+      // 建议：添加后重置选择，防止下次误操作
+      setNewTaskGroupId(null); 
     };
-  
+
     const selectedDateStr = selectedDate.format('YYYY-MM-DD');
     const currentDayData = dataMap[selectedDateStr] || { tasks: [], groups: [] };
     const holiday = HOLIDAYS[selectedDateStr];
