@@ -89,7 +89,6 @@ const HOLIDAYS = {
   '2025-12-25': { name: 'Christmas', country: 'AU' },
   '2025-12-26': { name: 'Boxing Day', country: 'AU' },
 
-  // --- 2026 部分主要假期 ---
   '2026-01-01': { name: '元旦', country: 'CN' },
   '2026-01-26': { name: 'Aus Day', country: 'AU' },
   '2026-02-16': { name: '除夕', country: 'CN' },
@@ -291,21 +290,42 @@ const CalendarView = ({ groups, tasks, onEditGroup, onToggleTask, onAddTask, onD
       return list;
     }, [dataMap]);
   
+    // ✅ 修复1：优化的节日配色逻辑，解决深色模式看不清的问题
+    const getHolidayColors = (country, isDark) => {
+        if (isDark) {
+            // 深色模式：使用深色背景 + 高亮浅色文字
+            return country === 'AU' 
+                ? { bg: 'rgba(23, 114, 255, 0.15)', text: '#91caff' }  // 澳洲: 亮蓝
+                : { bg: 'rgba(255, 77, 79, 0.15)', text: '#ff7875' };  // 中国: 亮红
+        } else {
+            // 浅色模式：淡色背景 + 深色文字
+            return country === 'AU' 
+                ? { bg: 'rgba(0, 58, 140, 0.08)', text: '#003a8c' } 
+                : { bg: 'rgba(168, 7, 26, 0.08)', text: '#a8071a' };
+        }
+    };
+
+    // ✅ 修复2：实现 Apple Calendar 风格的内部滚动
     const dateCellRender = useCallback((value) => {
       const dateStr = value.format('YYYY-MM-DD');
       const dayData = dataMap[dateStr]; 
       const holiday = HOLIDAYS[dateStr];
+      const holidayStyle = holiday ? getHolidayColors(holiday.country, isDark) : null;
   
       return (
         <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+          
+          {/* 节日显示 */}
           {holiday && (
-            <div style={{ marginBottom: 2, textAlign: 'center' }}>
+            <div style={{ marginBottom: 2, textAlign: 'center', flexShrink: 0 }}>
                <Tag 
                   bordered={false} 
                   style={{
                     margin: 0, width: '100%', padding: '0 2px', fontSize: 10, lineHeight: '18px',
-                    background: holiday.country === 'AU' ? 'rgba(0, 58, 140, 0.08)' : 'rgba(168, 7, 26, 0.08)',
-                    color: holiday.country === 'AU' ? '#003a8c' : '#a8071a', borderRadius: 4
+                    background: holidayStyle.bg,
+                    color: holidayStyle.text,
+                    borderRadius: 4,
+                    transition: 'all 0.3s'
                   }}
                >
                  <span style={{marginRight: 4}}>{holiday.country === 'AU' ? '🇦🇺' : '🇨🇳'}</span>
@@ -313,20 +333,38 @@ const CalendarView = ({ groups, tasks, onEditGroup, onToggleTask, onAddTask, onD
                </Tag>
             </div>
           )}
+
+          {/* 关键修改：内容区域设置为 flex:1 和 overflow-y: auto
+             这允许格子内部滚动，而不是被 slice 截断。
+             并添加 CSS 隐藏滚动条样式。
+          */}
           {dayData && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 2, marginTop: holiday ? 2 : 4 }}>
+              <div 
+                className="calendar-cell-scroll"
+                style={{ 
+                    display: 'flex', 
+                    flexDirection: 'column', 
+                    gap: 2, 
+                    marginTop: holiday ? 2 : 4,
+                    flex: 1,                 // 占据剩余空间
+                    overflowY: 'auto',       // 允许内部垂直滚动
+                    minHeight: 0             // Firefox Flex bug fix
+                }}
+                onWheel={(e) => e.stopPropagation()} // 防止滚动内部时切换月份
+              >
               {dayData.groups.map(g => (
                   <Tooltip title={`点击修改: ${g.name}`} key={g.id}>
                     <div style={styles.eventBar(g.color)} onClick={(e) => { e.stopPropagation(); onEditGroup(g); }}>{g.name}</div>
                   </Tooltip>
               ))}
-              {dayData.tasks.slice(0, 3).map(t => (
+              
+              {/* 移除了 .slice(0, 3) 限制，显示所有任务 */}
+              {dayData.tasks.map(t => (
                   <div key={t.id} style={styles.taskText(t.done, t.category)}>
-                    <div style={{minWidth: 6, width: 6, height: 6, borderRadius: 2, background: PRIORITY_CONFIG[t.category].color}}></div>
+                    <div style={{minWidth: 6, width: 6, height: 6, borderRadius: 2, background: PRIORITY_CONFIG[t.category].color, flexShrink: 0}}></div>
                     <span style={{overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis'}}>{t.content}</span>
                   </div>
               ))}
-              {dayData.tasks.length > 3 && <div style={{fontSize: 9, color: isDark ? '#999' : '#666', paddingLeft: 4}}>+{dayData.tasks.length - 3} 更多...</div>}
               </div>
           )}
         </div>
@@ -352,6 +390,8 @@ const CalendarView = ({ groups, tasks, onEditGroup, onToggleTask, onAddTask, onD
     const handleWheel = (e) => {
       if (viewMode === 'list') return; 
       if (isWheeling.current) return;
+      // 只有当鼠标不在单元格内部滚动区域时，才触发月份切换
+      // 但由于事件冒泡，这里做一个简单的延时锁即可，更复杂的判断交给 cellRender 的 stopPropagation
       isWheeling.current = true;
       setTimeout(() => { isWheeling.current = false; }, 300);
       if (e.deltaY > 0) setSelectedDate(prev => prev.add(1, 'month'));
@@ -360,6 +400,12 @@ const CalendarView = ({ groups, tasks, onEditGroup, onToggleTask, onAddTask, onD
   
     return (
       <>
+        {/* 添加全局 CSS 隐藏滚动条但保留功能 */}
+        <style>{`
+            .calendar-cell-scroll::-webkit-scrollbar { display: none; }
+            .calendar-cell-scroll { -ms-overflow-style: none; scrollbar-width: none; }
+        `}</style>
+
         <Card 
           style={styles.glassCard} 
           bordered={false} 
@@ -423,7 +469,7 @@ const CalendarView = ({ groups, tasks, onEditGroup, onToggleTask, onAddTask, onD
                   <div style={{padding: isMobile ? '16px' : '20px 40px'}}>
                       {listData.length > 0 ? listData.map((item, idx) => (
                           <div key={idx} style={{
-                              display: isMobile ? 'block' : 'flex', // Mobile change: Stack vertical
+                              display: isMobile ? 'block' : 'flex',
                               marginBottom: 24, 
                               gap: isMobile ? 0 : 24
                           }}>
@@ -476,7 +522,6 @@ const CalendarView = ({ groups, tasks, onEditGroup, onToggleTask, onAddTask, onD
           styles={{ header: {borderBottom: isDark ? '1px solid #303030' : '1px solid #f0f0f0', background: isDark ? '#141414' : '#fff'}, body: {background: isDark ? '#141414' : '#fff', padding: '24px', display: 'flex', flexDirection: 'column'}, mask: {backdropFilter: 'blur(4px)'}}}
           closeIcon={<span style={{color: isDark ? '#fff' : '#000'}}>✕</span>}
         >
-           {/* ... Drawer Content similar to previous but ensure flex layouts wrap ... */}
            <div style={{ flex: 1, overflowY: 'auto' }}>
               {holiday && (
                   <div style={{ marginBottom: 24, padding: '12px 16px', borderRadius: 8, background: holiday.country === 'AU' ? 'linear-gradient(90deg, #003a8c 0%, #002766 100%)' : 'linear-gradient(90deg, #a8071a 0%, #5c0011 100%)', display: 'flex', alignItems: 'center', gap: 12, border: '1px solid rgba(255,255,255,0.1)' }}>
