@@ -229,7 +229,6 @@ const CalendarView = ({ groups, tasks, onEditGroup, onToggleTask, onAddTask, onD
     const [selectedDate, setSelectedDate] = useState(dayjs());
     const [viewMode, setViewMode] = useState('month');
     
-    // 手机端默认进列表模式
     useEffect(() => {
         if(isMobile) setViewMode('list');
     }, [isMobile]);
@@ -274,22 +273,41 @@ const CalendarView = ({ groups, tasks, onEditGroup, onToggleTask, onAddTask, onD
       return list;
     }, [dataMap]);
   
+    // ✅ 核心修改：dateCellRender 渲染逻辑优化
     const dateCellRender = useCallback((value) => {
       const dateStr = value.format('YYYY-MM-DD');
       const dayData = dataMap[dateStr]; 
       const holiday = HOLIDAYS[dateStr];
   
       return (
-        <div style={{ position: 'relative', height: '100%', overflow: 'hidden' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+          
+          {/* 1. 节日显示优化：自然排在顶部，样式更紧凑 */}
           {holiday && (
-            <div style={{ position: 'absolute', top: -24, right: 0, textAlign: 'right' }}>
-              <Tag color={holiday.country === 'AU' ? 'blue' : 'red'} style={{marginRight: 0, border: 'none', background: holiday.country === 'AU' ? '#002766' : '#5c0011'}}>
-                  {holiday.country === 'AU' ? '🇦🇺' : (holiday.country === 'CN' ? '🇨🇳' : '🎉')} {holiday.name}
-              </Tag>
+            <div style={{ marginBottom: 2, textAlign: 'center' }}>
+               <Tag 
+                  bordered={false} 
+                  style={{
+                    margin: 0, 
+                    width: '100%', 
+                    padding: '0 2px',
+                    fontSize: 10,
+                    lineHeight: '18px',
+                    // 根据国家显示不同底色，AU用淡蓝，CN用淡红
+                    background: holiday.country === 'AU' ? 'rgba(0, 58, 140, 0.08)' : 'rgba(168, 7, 26, 0.08)',
+                    color: holiday.country === 'AU' ? '#003a8c' : '#a8071a',
+                    borderRadius: 4
+                  }}
+               >
+                 <span style={{marginRight: 4}}>{holiday.country === 'AU' ? '🇦🇺' : '🇨🇳'}</span>
+                 <span style={{fontWeight: 600}}>{holiday.name}</span>
+               </Tag>
             </div>
           )}
+
+          {/* 2. 团务和任务列表 */}
           {dayData && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 2, marginTop: 4 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 2, marginTop: holiday ? 2 : 4 }}>
               {dayData.groups.map(g => (
                   <Tooltip title={`点击修改: ${g.name}`} key={g.id}>
                     <div style={styles.eventBar(g.color)} onClick={(e) => { e.stopPropagation(); onEditGroup(g); }}>{g.name}</div>
@@ -308,6 +326,7 @@ const CalendarView = ({ groups, tasks, onEditGroup, onToggleTask, onAddTask, onD
       );
     }, [dataMap, onEditGroup, styles, isDark]); 
   
+    // --- 下面的代码保持不变 ---
     const handleDrawerQuickAdd = () => {
       if (!newTaskContent.trim()) { message.warning('请输入任务内容'); return; }
       onAddTask({
@@ -458,9 +477,7 @@ const CalendarView = ({ groups, tasks, onEditGroup, onToggleTask, onAddTask, onD
                   <div style={{color: isDark ? 'rgba(255,255,255,0.5)' : '#999', fontSize: 13, textTransform: 'uppercase', letterSpacing: 1}}>截止任务 ({currentDayData.tasks.length})</div>
                 </div>
                 <List dataSource={currentDayData.tasks} renderItem={item => {
-                      // 关键修复：查找关联的团名
                       const linkedGroup = item.linkedInfo ? groups.find(g => g.id === item.linkedInfo.groupId) : null;
-                      
                       return (
                       <div style={{ display: 'flex', gap: 12, padding: '12px', marginBottom: 8, background: isDark ? (item.done ? 'rgba(255,255,255,0.02)' : 'rgba(30,30,30,0.8)') : (item.done ? '#f5f5f5' : '#fff'), borderRadius: 8, border: isDark ? '1px solid #303030' : '1px solid #e8e8e8', alignItems: 'flex-start', boxShadow: isDark ? 'none' : '0 1px 2px rgba(0,0,0,0.05)' }}>
                         <Checkbox checked={item.done} onChange={() => onToggleTask(item.id, item.done)} style={{marginTop: 4}} />
@@ -468,12 +485,7 @@ const CalendarView = ({ groups, tasks, onEditGroup, onToggleTask, onAddTask, onD
                           <div style={{color: isDark ? (item.done ? '#666' : '#fff') : (item.done ? '#bbb' : '#333'), textDecoration: item.done ? 'line-through' : 'none', fontSize: 14}}>{item.content}</div>
                           <div style={{marginTop: 6, display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap'}}>
                             <Tag bordered={false} color={PRIORITY_CONFIG[item.category].color} style={{margin:0, fontSize:10, lineHeight:'16px', padding: '0 4px'}}>{PRIORITY_CONFIG[item.category].label}</Tag>
-                            {/* 显示具体的团名 */}
-                            {item.linkedInfo && (
-                                <span style={{fontSize: 10, color: '#1890ff', display: 'flex', alignItems: 'center', gap: 2, cursor: 'pointer', maxWidth: 150, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
-                                    <LinkOutlined/> {linkedGroup ? linkedGroup.name : '未知团务'}
-                                </span>
-                            )}
+                            {item.linkedInfo && <span style={{fontSize: 10, color: '#1890ff', display: 'flex', alignItems: 'center', gap: 2, cursor: 'pointer', maxWidth: 150, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}><LinkOutlined/> {linkedGroup ? linkedGroup.name : '未知团务'}</span>}
                           </div>
                         </div>
                         <div style={{display: 'flex', gap: 4}}>
