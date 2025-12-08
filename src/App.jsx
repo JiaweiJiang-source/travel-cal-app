@@ -1171,19 +1171,20 @@ const App = () => {
   };
   
   const handleSignOut = async () => {
-      // 1. 执行 Supabase 的退出逻辑
-      const { error } = await supabase.auth.signOut();
-      
+      // ⚡️ 核心修改：添加 { scope: 'local' }
+      // 意思就是： "别管服务器那边怎么样，只把我自己浏览器里的登录信息删了就行"
+      const { error } = await supabase.auth.signOut({ scope: 'local' });
+
       if (error) {
-          message.error('退出失败: ' + error.message);
-      } else {
-          // 2. 关键：手动强制清空当前 Session 和数据
-          // 这样无论 onAuthStateChange 是否触发，UI 都会立即切换到登录页
-          setSession(null);
-          setGroups([]);
-          setTasks([]);
-          message.success('已退出登录');
+          console.warn("本地退出遇到问题:", error.message);
       }
+
+      // 强制清空 React 状态，切回登录页
+      setSession(null);
+      setGroups([]);
+      setTasks([]);
+      
+      message.success('已退出登录');
   };
 
   if (!session) {
