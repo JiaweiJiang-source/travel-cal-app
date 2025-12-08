@@ -871,12 +871,14 @@ const CalendarView = ({ groups, tasks, onEditGroup, onToggleTask, onAddTask, onD
     // ✅ 修改 2: 允许提交空日期
     const handleQuickAdd = () => {
         if(!quickContent) return message.error('请填写内容');
-        // 如果没有选日期，deadline 传 null 或空字符串
-        const deadlineVal = quickDate ? quickDate.format('YYYY-MM-DD') : ''; 
+        
+        // ❌ 原代码：const deadlineVal = quickDate ? quickDate.format('YYYY-MM-DD') : ''; 
+        // ✅ 修改为：如果没有选日期，必须传 null，不能传空字符串
+        const deadlineVal = quickDate ? quickDate.format('YYYY-MM-DD') : null; 
         
         onAddQuickTask({ 
           content: quickContent, 
-          deadline: deadlineVal, // 允许为空
+          deadline: deadlineVal, 
           category: quickCategory, 
           linkedInfo: { groupId: activeGroupId } 
         });
@@ -1193,12 +1195,14 @@ const App = () => {
   };
 
   const handleTaskSubmit = async (values) => {
-      // if(!values.deadline) { message.error("请选择日期"); return; }
+      // 这里的校验逻辑：如果没选日期，就允许提交，但必须处理数据格式
+      
       const newTaskData = {
           content: values.content,
           category: values.category,
-          // ✅ 修改：如果没选日期，传空字符串或 null
-          deadline: values.deadline ? values.deadline.format('YYYY-MM-DD') : '', 
+          
+          deadline: values.deadline ? values.deadline.format('YYYY-MM-DD') : null,
+          
           linkedInfo: values.groupId ? { groupId: values.groupId } : null,
           user_id: session.user.id
       };
