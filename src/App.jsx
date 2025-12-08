@@ -276,7 +276,6 @@ const CalendarView = ({ groups, tasks, onEditGroup, onToggleTask, onAddTask, onD
     const styles = getStyles(isDark);
     const isWheeling = useRef(false);
   
-    // 数据处理保持不变
     const dataMap = useMemo(() => {
       const map = {};
       tasks.forEach(task => {
@@ -310,69 +309,60 @@ const CalendarView = ({ groups, tasks, onEditGroup, onToggleTask, onAddTask, onD
       return list;
     }, [dataMap]);
   
-    // ✅ 核心修改：完全自定义单元格渲染
-    // 包含：背景色逻辑、Flex 布局（左节日 右日期）、内容渲染
-    const dateFullCellRender = useCallback((value) => {
+    // ✅ 核心修改：dateCellRender 渲染逻辑优化
+    const dateCellRender = useCallback((value) => {
       const dateStr = value.format('YYYY-MM-DD');
       const dayData = dataMap[dateStr]; 
       const holiday = HOLIDAYS[dateStr];
-      const isCurrentMonth = value.month() === selectedDate.month(); // 判断是否是当月日期
-      
-      // 1. 动态计算背景色 (如果是节日，整个格子变色)
-      let cellBackground = 'transparent';
-      if (holiday) {
-          // 澳洲用浅蓝，中国用浅红，深色模式下颜色调暗一点
-          if (holiday.country === 'AU') cellBackground = isDark ? 'rgba(24, 144, 255, 0.15)' : '#e6f7ff';
-          else cellBackground = isDark ? 'rgba(245, 34, 45, 0.15)' : '#fff1f0';
-      }
-
+  
       return (
-        <div className="ant-picker-cell-inner" style={{ 
-            height: isMobile ? 80 : 110, // 控制格子高度
-            borderTop: '2px solid transparent', 
-            background: cellBackground, // 应用全格背景
-            display: 'flex', 
-            flexDirection: 'column',
-            padding: '4px 8px',
-            margin: '0 4px', // 让格子之间有点间隙
-            borderRadius: 8,
-            opacity: isCurrentMonth ? 1 : 0.3, // 非当月日期变淡
-            transition: 'all 0.3s'
-        }}>
-          {/* 2. 头部：Flex 布局，左边节日，右边日期 */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-             <div style={{ fontSize: 11, fontWeight: 'bold', color: holiday ? (holiday.country === 'AU' ? '#1890ff' : '#f5222d') : 'transparent' }}>
-                {holiday ? holiday.name : ''}
-             </div>
-             <div style={{ fontSize: 16, fontWeight: 600, color: isDark ? '#fff' : '#333' }}>
-                {value.date()}
-             </div>
-          </div>
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+          
+          {/* 1. 节日显示优化：自然排在顶部，样式更紧凑 */}
+          {holiday && (
+            <div style={{ marginBottom: 2, textAlign: 'center' }}>
+               <Tag 
+                  bordered={false} 
+                  style={{
+                    margin: 0, 
+                    width: '100%', 
+                    padding: '0 2px',
+                    fontSize: 10,
+                    lineHeight: '18px',
+                    // 根据国家显示不同底色，AU用淡蓝，CN用淡红
+                    background: holiday.country === 'AU' ? 'rgba(0, 58, 140, 0.08)' : 'rgba(168, 7, 26, 0.08)',
+                    color: holiday.country === 'AU' ? '#003a8c' : '#a8071a',
+                    borderRadius: 4
+                  }}
+               >
+                 <span style={{marginRight: 4}}>{holiday.country === 'AU' ? '🇦🇺' : '🇨🇳'}</span>
+                 <span style={{fontWeight: 600}}>{holiday.name}</span>
+               </Tag>
+            </div>
+          )}
 
-          {/* 3. 内容区域：团队条 + 任务点 */}
-          <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', gap: 2 }}>
-             {dayData && dayData.groups.map(g => (
+          {/* 2. 团务和任务列表 */}
+          {dayData && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 2, marginTop: holiday ? 2 : 4 }}>
+              {dayData.groups.map(g => (
                   <Tooltip title={`点击修改: ${g.name}`} key={g.id}>
                     <div style={styles.eventBar(g.color)} onClick={(e) => { e.stopPropagation(); onEditGroup(g); }}>{g.name}</div>
                   </Tooltip>
-             ))}
-             {dayData && dayData.tasks.slice(0, 2).map(t => (
+              ))}
+              {dayData.tasks.slice(0, 3).map(t => (
                   <div key={t.id} style={styles.taskText(t.done, t.category)}>
                     <div style={{minWidth: 6, width: 6, height: 6, borderRadius: 2, background: PRIORITY_CONFIG[t.category].color}}></div>
                     <span style={{overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis'}}>{t.content}</span>
                   </div>
-             ))}
-             {dayData && dayData.tasks.length > 2 && (
-                 <div style={{fontSize: 9, color: isDark ? '#999' : '#666', textAlign: 'right'}}>
-                    +{dayData.tasks.length - 2}
-                 </div>
-             )}
-          </div>
+              ))}
+              {dayData.tasks.length > 3 && <div style={{fontSize: 9, color: isDark ? '#999' : '#666', paddingLeft: 4}}>+{dayData.tasks.length - 3} 更多...</div>}
+              </div>
+          )}
         </div>
       );
-    }, [dataMap, onEditGroup, styles, isDark, selectedDate, isMobile]); 
+    }, [dataMap, onEditGroup, styles, isDark]); 
   
-    // 侧边栏逻辑保持不变...
+    // --- 下面的代码保持不变 ---
     const handleDrawerQuickAdd = () => {
       if (!newTaskContent.trim()) { message.warning('请输入任务内容'); return; }
       onAddTask({
@@ -406,7 +396,6 @@ const CalendarView = ({ groups, tasks, onEditGroup, onToggleTask, onAddTask, onD
           bodyStyle={{padding: 0, height: '100%', display: 'flex', flexDirection: 'column'}}
           onWheel={handleWheel}
         >
-          {/* Header 保持不变 */}
           <div style={{ 
               padding: '16px 24px', 
               display: 'flex', 
@@ -429,7 +418,7 @@ const CalendarView = ({ groups, tasks, onEditGroup, onToggleTask, onAddTask, onD
                     </>
                   ) : <div style={{ fontSize: 24, fontWeight: 'bold', color: isDark ? '#fff' : '#000' }}>未来日程流 (60天)</div>}
               </div>
-              
+  
               <div style={{display: 'flex', gap: 16, width: isMobile ? '100%' : 'auto', justifyContent: isMobile ? 'space-between' : 'flex-end'}}>
                   {!isMobile && (
                       <Radio.Group value={viewMode} onChange={e => setViewMode(e.target.value)} buttonStyle="solid">
@@ -437,6 +426,7 @@ const CalendarView = ({ groups, tasks, onEditGroup, onToggleTask, onAddTask, onD
                           <Radio.Button value="list"><UnorderedListOutlined /> 列表</Radio.Button>
                       </Radio.Group>
                   )}
+                  
                   {viewMode === 'month' && (
                       <div style={{display: 'flex', gap: 8}}>
                           <Tooltip title="上个月"><Button icon={<LeftOutlined />} onClick={() => setSelectedDate(prev => prev.subtract(1, 'month'))} /></Tooltip>
@@ -455,14 +445,11 @@ const CalendarView = ({ groups, tasks, onEditGroup, onToggleTask, onAddTask, onD
                       setSelectedDate(date);
                       if (source === 'date') { setDrawerVisible(true); setNewTaskContent(''); }
                     }}
-                    // ✅ 关键修改：使用 fullCellRender 替换默认的 cellRender
-                    // 在 AntD v5 中，fullCellRender 接受同样的参数，但其返回值会替换整个单元格内容
-                    fullCellRender={dateFullCellRender}
+                    cellRender={(current, info) => info.type === 'date' ? dateCellRender(current) : info.originNode}
                     fullscreen={true} 
                     headerRender={() => null} 
                   />
               ) : (
-                  // List 视图逻辑保持不变
                   <div style={{padding: isMobile ? '16px' : '20px 40px'}}>
                       {listData.length > 0 ? listData.map((item, idx) => (
                           <div key={idx} style={{display: 'flex', marginBottom: 24, gap: isMobile ? 12 : 24}}>
@@ -494,7 +481,7 @@ const CalendarView = ({ groups, tasks, onEditGroup, onToggleTask, onAddTask, onD
               )}
           </div>
         </Card>
-        
+  
         <Drawer
           title={<span style={{color: isDark ? '#fff' : '#000', fontSize: 18}}>{selectedDate.format('YYYY年MM月DD日')} · 日程详情</span>}
           placement="right" width={isMobile ? '100%' : 420} onClose={() => setDrawerVisible(false)} open={drawerVisible}
