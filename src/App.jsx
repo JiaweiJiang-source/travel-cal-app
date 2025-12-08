@@ -184,7 +184,7 @@ const AuthPage = () => {
             <Card style={{ width: '90%', maxWidth: 400, boxShadow: '0 4px 20px rgba(0,0,0,0.1)', borderRadius: 16 }} bordered={false}>
                 <div style={{ textAlign: 'center', marginBottom: 24 }}>
                     <GlobalOutlined style={{ fontSize: 48, color: '#1890ff', marginBottom: 16 }} />
-                    <Title level={3}>Travel Cal Cloud</Title>
+                    <Title level={3}>Travel Calendar Cloud</Title>
                     <Text type="secondary">Travel Calendar</Text>
                 </div>
                 
@@ -678,7 +678,7 @@ const CalendarView = ({ groups, tasks, onEditGroup, onToggleTask, onAddTask, onD
 // --- 主程序 (App) 修改版 ---
 const App = () => {
   const [activeTab, setActiveTab] = useState('calendar');
-  const [isDarkMode, setIsDarkMode] = useState(true);
+  const [isDarkMode, setIsDarkMode] = useState(false);
   
   // 1. Session 状态
   const [session, setSession] = useState(null);
