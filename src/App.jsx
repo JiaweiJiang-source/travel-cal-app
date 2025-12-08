@@ -938,128 +938,320 @@ const CalendarView = ({ groups, tasks, onEditGroup, onToggleTask, onAddTask, onD
   //   );
   // };
   // --- 修改后的 GroupNotepad 组件 ---
-const GroupNotepad = ({ group, onSave, isDark }) => {
-  // ✅ 核心修改：初始化默认内容
-  const [blocks, setBlocks] = useState(() => {
-    // 1. 如果数据库里已经有保存的内容，就用保存的
-    if (group.memo_data && Array.isArray(group.memo_data) && group.memo_data.length > 0) {
-      return group.memo_data;
-    }
-    
-    // 2. 如果是新的或者是空的，初始化这三行默认大标题
-    // level: 0 会自动触发下方的大字体和加粗样式
-    const baseId = Date.now();
-    return [
-      { id: baseId,     content: '预定机票', level: 0, checked: false },
-      { id: baseId + 1, content: '预定酒店', level: 0, checked: false },
-      { id: baseId + 2, content: '预定车辆', level: 0, checked: false }
-    ];
-  });
-
-  // 自动保存防抖
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      onSave(group.id, blocks);
-    }, 1000); 
-    return () => clearTimeout(timer);
-  }, [blocks, group.id]);
-
-  // 更新某一行
-  const updateBlock = (id, field, value) => {
-    setBlocks(prev => prev.map(b => b.id === id ? { ...b, [field]: value } : b));
-  };
-
-  // 键盘事件核心逻辑 (保持不变)
-  const handleKeyDown = (e, index, id) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      // 回车时，默认继承上一行的层级。
-      // 如果你想让在大标题下回车自动变成小标题，可以把下面的 blocks[index].level 改为 blocks[index].level + 1
-      const newLevel = blocks[index].level; 
+  // const GroupNotepad = ({ group, onSave, isDark }) => {
+  //   // ✅ 核心修改：初始化默认内容
+  //   const [blocks, setBlocks] = useState(() => {
+  //     // 1. 如果数据库里已经有保存的内容，就用保存的
+  //     if (group.memo_data && Array.isArray(group.memo_data) && group.memo_data.length > 0) {
+  //       return group.memo_data;
+  //     }
       
-      const newBlock = { id: Date.now(), content: '', level: newLevel, checked: false };
-      const newBlocks = [...blocks];
-      newBlocks.splice(index + 1, 0, newBlock);
-      setBlocks(newBlocks);
-      setTimeout(() => document.getElementById(`note-input-${newBlock.id}`)?.focus(), 0);
-    } 
-    else if (e.key === 'Backspace' && blocks[index].content === '') {
-      e.preventDefault();
-      if (blocks.length > 1) {
-        const newBlocks = blocks.filter(b => b.id !== id);
-        setBlocks(newBlocks);
-        setTimeout(() => document.getElementById(`note-input-${blocks[index - 1].id}`)?.focus(), 0);
-      }
-    }
-    else if (e.key === 'Tab') {
-      e.preventDefault();
-      const newLevel = e.shiftKey ? Math.max(0, blocks[index].level - 1) : Math.min(4, blocks[index].level + 1);
-      updateBlock(id, 'level', newLevel);
-    }
-  };
+  //     // 2. 如果是新的或者是空的，初始化这三行默认大标题
+  //     // level: 0 会自动触发下方的大字体和加粗样式
+  //     const baseId = Date.now();
+  //     return [
+  //       { id: baseId,     content: '预定机票', level: 0, checked: false },
+  //       { id: baseId + 1, content: '预定酒店', level: 0, checked: false },
+  //       { id: baseId + 2, content: '预定车辆', level: 0, checked: false }
+  //     ];
+  //   });
 
-  return (
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-      <div style={{ marginBottom: 12, paddingBottom: 8, borderBottom: isDark ? '1px solid #333' : '1px solid #eee', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <span style={{ fontWeight: 'bold', color: isDark ? '#fff' : '#333' }}>
-          <FileTextOutlined style={{ marginRight: 6 }} /> 团务随记
-        </span>
-        <span style={{ fontSize: 12, color: '#999' }}>Tab缩进 / Enter换行</span>
-      </div>
-      
-      <div style={{ flex: 1, overflowY: 'auto', paddingRight: 4 }}>
-        {blocks.map((block, index) => (
-          <div key={block.id} style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            marginBottom: 4, 
-            paddingLeft: `${block.level * 24}px`, // 层级缩进
-            opacity: block.checked ? 0.5 : 1,
-            transition: 'all 0.2s'
-          }}>
-            {/* 拖拽/层级指示点 */}
-            <div style={{ marginRight: 8, cursor: 'pointer', color: isDark ? '#555' : '#ccc' }} onClick={() => updateBlock(block.id, 'checked', !block.checked)}>
-               {block.checked ? <CheckCircleOutlined style={{color: '#52c41a'}} /> : (
-                 <div style={{width: 6, height: 6, borderRadius: '50%', background: block.level === 0 ? (isDark?'#fff':'#000') : '#999'}}></div>
-               )}
-            </div>
+  //   // 自动保存防抖
+  //   useEffect(() => {
+  //     const timer = setTimeout(() => {
+  //       onSave(group.id, blocks);
+  //     }, 1000); 
+  //     return () => clearTimeout(timer);
+  //   }, [blocks, group.id]);
 
-            <Input
-              id={`note-input-${block.id}`}
-              value={block.content}
-              onChange={(e) => updateBlock(block.id, 'content', e.target.value)}
-              onKeyDown={(e) => handleKeyDown(e, index, block.id)}
-              placeholder={block.level === 0 ? "大流程/主题..." : "子项..."}
-              bordered={false}
-              style={{ 
-                padding: '4px 0',
-                color: isDark ? '#ddd' : '#333',
-                textDecoration: block.checked ? 'line-through' : 'none',
-                // ✅ 样式逻辑：level 0 自动变粗变大
-                fontWeight: block.level === 0 ? 600 : 400, 
-                fontSize: block.level === 0 ? 15 : 14
-              }}
-            />
-            
-            <Button type="text" size="small" icon={<DeleteOutlined style={{fontSize: 12, color: '#999'}} />} onClick={() => {
-                if(blocks.length > 1) setBlocks(prev => prev.filter(b => b.id !== block.id));
-            }} />
-          </div>
-        ))}
+  //   // 更新某一行
+  //   const updateBlock = (id, field, value) => {
+  //     setBlocks(prev => prev.map(b => b.id === id ? { ...b, [field]: value } : b));
+  //   };
+
+  //   // 键盘事件核心逻辑 (保持不变)
+  //   const handleKeyDown = (e, index, id) => {
+  //     if (e.key === 'Enter') {
+  //       e.preventDefault();
+  //       // 回车时，默认继承上一行的层级。
+  //       // 如果你想让在大标题下回车自动变成小标题，可以把下面的 blocks[index].level 改为 blocks[index].level + 1
+  //       const newLevel = blocks[index].level; 
         
-        {/* 点击底部空白处添加新行 */}
-        <div 
-          style={{ height: 100, cursor: 'text' }} 
-          onClick={() => {
-            const newId = Date.now();
-            setBlocks(prev => [...prev, { id: newId, content: '', level: 0, checked: false }]);
-            setTimeout(() => document.getElementById(`note-input-${newId}`)?.focus(), 0);
-          }} 
-        />
+  //       const newBlock = { id: Date.now(), content: '', level: newLevel, checked: false };
+  //       const newBlocks = [...blocks];
+  //       newBlocks.splice(index + 1, 0, newBlock);
+  //       setBlocks(newBlocks);
+  //       setTimeout(() => document.getElementById(`note-input-${newBlock.id}`)?.focus(), 0);
+  //     } 
+  //     else if (e.key === 'Backspace' && blocks[index].content === '') {
+  //       e.preventDefault();
+  //       if (blocks.length > 1) {
+  //         const newBlocks = blocks.filter(b => b.id !== id);
+  //         setBlocks(newBlocks);
+  //         setTimeout(() => document.getElementById(`note-input-${blocks[index - 1].id}`)?.focus(), 0);
+  //       }
+  //     }
+  //     else if (e.key === 'Tab') {
+  //       e.preventDefault();
+  //       const newLevel = e.shiftKey ? Math.max(0, blocks[index].level - 1) : Math.min(4, blocks[index].level + 1);
+  //       updateBlock(id, 'level', newLevel);
+  //     }
+  //   };
+
+  //   return (
+  //     <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+  //       <div style={{ marginBottom: 12, paddingBottom: 8, borderBottom: isDark ? '1px solid #333' : '1px solid #eee', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+  //         <span style={{ fontWeight: 'bold', color: isDark ? '#fff' : '#333' }}>
+  //           <FileTextOutlined style={{ marginRight: 6 }} /> 团务随记
+  //         </span>
+  //         <span style={{ fontSize: 12, color: '#999' }}>Tab缩进 / Enter换行</span>
+  //       </div>
+        
+  //       <div style={{ flex: 1, overflowY: 'auto', paddingRight: 4 }}>
+  //         {blocks.map((block, index) => (
+  //           <div key={block.id} style={{ 
+  //             display: 'flex', 
+  //             alignItems: 'center', 
+  //             marginBottom: 4, 
+  //             paddingLeft: `${block.level * 24}px`, // 层级缩进
+  //             opacity: block.checked ? 0.5 : 1,
+  //             transition: 'all 0.2s'
+  //           }}>
+  //             {/* 拖拽/层级指示点 */}
+  //             <div style={{ marginRight: 8, cursor: 'pointer', color: isDark ? '#555' : '#ccc' }} onClick={() => updateBlock(block.id, 'checked', !block.checked)}>
+  //               {block.checked ? <CheckCircleOutlined style={{color: '#52c41a'}} /> : (
+  //                 <div style={{width: 6, height: 6, borderRadius: '50%', background: block.level === 0 ? (isDark?'#fff':'#000') : '#999'}}></div>
+  //               )}
+  //             </div>
+
+  //             <Input
+  //               id={`note-input-${block.id}`}
+  //               value={block.content}
+  //               onChange={(e) => updateBlock(block.id, 'content', e.target.value)}
+  //               onKeyDown={(e) => handleKeyDown(e, index, block.id)}
+  //               placeholder={block.level === 0 ? "大流程/主题..." : "子项..."}
+  //               bordered={false}
+  //               style={{ 
+  //                 padding: '4px 0',
+  //                 color: isDark ? '#ddd' : '#333',
+  //                 textDecoration: block.checked ? 'line-through' : 'none',
+  //                 // ✅ 样式逻辑：level 0 自动变粗变大
+  //                 fontWeight: block.level === 0 ? 600 : 400, 
+  //                 fontSize: block.level === 0 ? 15 : 14
+  //               }}
+  //             />
+              
+  //             <Button type="text" size="small" icon={<DeleteOutlined style={{fontSize: 12, color: '#999'}} />} onClick={() => {
+  //                 if(blocks.length > 1) setBlocks(prev => prev.filter(b => b.id !== block.id));
+  //             }} />
+  //           </div>
+  //         ))}
+          
+  //         {/* 点击底部空白处添加新行 */}
+  //         <div 
+  //           style={{ height: 100, cursor: 'text' }} 
+  //           onClick={() => {
+  //             const newId = Date.now();
+  //             setBlocks(prev => [...prev, { id: newId, content: '', level: 0, checked: false }]);
+  //             setTimeout(() => document.getElementById(`note-input-${newId}`)?.focus(), 0);
+  //           }} 
+  //         />
+  //       </div>
+  //     </div>
+  //   );
+  // };
+  // --- 升级版: 支持Markdown语法和富文本类型的备忘录 ---
+  const GroupNotepad = ({ group, onSave, isDark }) => {
+    // 块类型定义: 'text'(普通), 'h1'(大标题), 'h2'(小标题), 'todo'(待办)
+    const [blocks, setBlocks] = useState(() => {
+      if (group.memo_data && Array.isArray(group.memo_data) && group.memo_data.length > 0) {
+        // 兼容旧数据：如果没有 type 字段，默认为 'todo' (之前的逻辑) 或 'text'
+        return group.memo_data.map(b => ({ ...b, type: b.type || (b.checked !== undefined ? 'todo' : 'text') }));
+      }
+      
+      // 初始化默认内容
+      const baseId = Date.now();
+      return [
+        { id: baseId,     content: '行程大纲', type: 'h1', level: 0, checked: false },
+        { id: baseId + 1, content: '预定机票', type: 'todo', level: 0, checked: false },
+        { id: baseId + 2, content: '预定酒店', type: 'todo', level: 0, checked: false },
+        { id: baseId + 3, content: '这里可以随意打字...', type: 'text', level: 0, checked: false }
+      ];
+    });
+
+    // 自动保存
+    useEffect(() => {
+      const timer = setTimeout(() => {
+        onSave(group.id, blocks);
+      }, 1000); 
+      return () => clearTimeout(timer);
+    }, [blocks, group.id]);
+
+    // 通用更新函数
+    const updateBlock = (id, updates) => {
+      setBlocks(prev => prev.map(b => b.id === id ? { ...b, ...updates } : b));
+    };
+
+    // 处理 Markdown 快捷键触发
+    const handleInputChange = (e, id, type) => {
+      let val = e.target.value;
+      
+      // Markdown 触发器逻辑
+      if (type === 'text' || type === 'todo') {
+          if (val.startsWith('# ')) {
+              updateBlock(id, { content: val.slice(2), type: 'h1' }); // 变一级标题
+              return;
+          }
+          if (val.startsWith('## ')) {
+              updateBlock(id, { content: val.slice(3), type: 'h2' }); // 变二级标题
+              return;
+          }
+          if (val.startsWith('[] ') || val.startsWith('【】 ')) {
+              updateBlock(id, { content: val.slice(3), type: 'todo' }); // 变待办
+              return;
+          }
+      }
+
+      updateBlock(id, { content: val });
+    };
+
+    // 键盘事件
+    const handleKeyDown = (e, index, id, currentType) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        // 智能回车逻辑：
+        // 1. 如果当前是标题，下一行变回普通文本
+        // 2. 如果当前是待办，下一行继续是待办
+        const nextType = (currentType === 'h1' || currentType === 'h2') ? 'text' : currentType;
+        
+        const newBlock = { id: Date.now(), content: '', level: blocks[index].level, type: nextType, checked: false };
+        const newBlocks = [...blocks];
+        newBlocks.splice(index + 1, 0, newBlock);
+        setBlocks(newBlocks);
+        setTimeout(() => document.getElementById(`note-input-${newBlock.id}`)?.focus(), 0);
+      } 
+      else if (e.key === 'Backspace') {
+        if (blocks[index].content === '') {
+            // 如果当前是特殊类型且为空，按退格键变回普通文本
+            if (currentType !== 'text') {
+                e.preventDefault();
+                updateBlock(id, { type: 'text' });
+                return;
+            }
+            // 如果是普通文本且为空，删除行
+            e.preventDefault();
+            if (blocks.length > 1) {
+              const newBlocks = blocks.filter(b => b.id !== id);
+              setBlocks(newBlocks);
+              setTimeout(() => document.getElementById(`note-input-${blocks[index - 1].id}`)?.focus(), 0);
+            }
+        }
+      }
+      else if (e.key === 'Tab') {
+        e.preventDefault();
+        const newLevel = e.shiftKey ? Math.max(0, blocks[index].level - 1) : Math.min(4, blocks[index].level + 1);
+        updateBlock(id, { level: newLevel });
+      }
+    };
+
+    // 底部工具栏操作
+    const addBlock = (type) => {
+        const newId = Date.now();
+        setBlocks(prev => [...prev, { id: newId, content: '', level: 0, type: type, checked: false }]);
+        setTimeout(() => document.getElementById(`note-input-${newId}`)?.focus(), 0);
+    };
+
+    return (
+      <div style={{ height: '100%', display: 'flex', flexDirection: 'column', position: 'relative' }}>
+        {/* 顶部提示 */}
+        <div style={{ paddingBottom: 8, borderBottom: isDark ? '1px solid #333' : '1px solid #eee', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 12, color: '#999' }}>
+          <span>支持 Markdown: # 标题, [] 待办</span>
+          <span>{blocks.length} 行内容</span>
+        </div>
+        
+        {/* 内容编辑区 */}
+        <div style={{ flex: 1, overflowY: 'auto', paddingRight: 4, paddingBottom: 40 }}>
+          {blocks.map((block, index) => (
+            <div key={block.id} style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              marginTop: 6,
+              marginBottom: 6,
+              paddingLeft: `${block.level * 24}px`, 
+              opacity: block.checked ? 0.5 : 1,
+              transition: 'all 0.2s'
+            }}>
+              {/* 左侧图标区: 待办显示勾选框, 文本/标题显示小圆点 */}
+              <div style={{ marginRight: 8, width: 20, display: 'flex', justifyContent: 'center', flexShrink: 0 }}>
+                {block.type === 'todo' ? (
+                    <Checkbox 
+                          checked={block.checked} 
+                          onChange={(e) => updateBlock(block.id, { checked: e.target.checked })} 
+                    />
+                ) : (
+                    <div style={{
+                        width: 6, height: 6, borderRadius: '50%', 
+                        background: block.type.startsWith('h') ? (isDark?'#fff':'#000') : '#ccc',
+                        marginTop: block.type.startsWith('h') ? 6 : 0 // 标题时圆点下移一点对齐
+                      }}></div>
+                )}
+              </div>
+
+              <Input
+                id={`note-input-${block.id}`}
+                value={block.content}
+                onChange={(e) => handleInputChange(e, block.id, block.type)}
+                onKeyDown={(e) => handleKeyDown(e, index, block.id, block.type)}
+                placeholder="输入内容..."
+                bordered={false}
+                style={{ 
+                  padding: '0 4px',
+                  color: isDark ? '#ddd' : '#333',
+                  textDecoration: block.checked ? 'line-through' : 'none',
+                  // === 样式核心 ===
+                  fontWeight: block.type === 'h1' ? 800 : (block.type === 'h2' ? 600 : 400), 
+                  fontSize: block.type === 'h1' ? 20 : (block.type === 'h2' ? 16 : 14),
+                  lineHeight: block.type === 'h1' ? 1.5 : 1.5,
+                }}
+              />
+              
+              {/* 只有鼠标悬停或移动端才显示的删除按钮 (这里简化为一直显示但颜色很淡) */}
+              <Button type="text" size="small" icon={<DeleteOutlined style={{fontSize: 12, color: isDark ? '#444' : '#eee'}} />} 
+                  onClick={() => { if(blocks.length > 1) setBlocks(prev => prev.filter(b => b.id !== block.id)); }} 
+              />
+            </div>
+          ))}
+          
+          {/* 底部点击空白添加 */}
+          <div style={{ height: 60, cursor: 'text' }} onClick={() => addBlock('text')} />
+        </div>
+
+        {/* 底部浮动工具栏 (仿苹果备忘录) */}
+        <div style={{ 
+            position: 'absolute', bottom: 0, left: 0, right: 0, 
+            padding: '8px 16px', 
+            background: isDark ? 'rgba(30,30,30,0.95)' : 'rgba(255,255,255,0.95)', 
+            backdropFilter: 'blur(10px)',
+            borderTop: isDark ? '1px solid #444' : '1px solid #eee',
+            display: 'flex', justifyContent: 'space-around', alignItems: 'center',
+            borderRadius: '0 0 16px 16px'
+        }}>
+            <Tooltip title="添加待办">
+              <Button type="text" icon={<CheckSquareOutlined style={{fontSize: 18}} />} onClick={() => addBlock('todo')} />
+            </Tooltip>
+            <Tooltip title="添加大标题">
+              <Button type="text" icon={<span style={{fontSize: 18, fontWeight: 'bold'}}>H1</span>} onClick={() => addBlock('h1')} />
+            </Tooltip>
+            <Tooltip title="添加小标题">
+              <Button type="text" icon={<span style={{fontSize: 16, fontWeight: 'bold'}}>H2</span>} onClick={() => addBlock('h2')} />
+            </Tooltip>
+            <Tooltip title="添加文本">
+              <Button type="text" icon={<FileTextOutlined style={{fontSize: 18}} />} onClick={() => addBlock('text')} />
+            </Tooltip>
+        </div>
       </div>
-    </div>
-  );
-};
+    );
+  };
 
   // 1. 在参数里解构出 onDelete 和 onEdit
   // const WorkflowTracker = ({ groups, tasks, onToggleTask, onAddQuickTask, onDelete, onEdit, isDark, isMobile }) => {
