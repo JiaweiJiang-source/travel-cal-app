@@ -49,22 +49,40 @@ const COLOR_PALETTE = [
 ];
 
 const HOLIDAYS = {
-  '2025-01-01': { name: '元旦', country: 'CN' },
+  // --- 2025 Holidays ---
+  '2025-01-01': { name: '元旦 / New Year', country: 'CN' }, // CN & AU share this
+  '2025-01-26': { name: 'Australia Day', country: 'AU' },
+  '2025-01-27': { name: 'Aus Day (Observed)', country: 'AU' },
   '2025-01-28': { name: '除夕', country: 'CN' },
   '2025-01-29': { name: '春节', country: 'CN' },
   '2025-04-04': { name: '清明节', country: 'CN' },
-  '2025-05-01': { name: '劳动节', country: 'CN' },
-  '2025-05-31': { name: '端午节', country: 'CN' },
-  '2025-10-01': { name: '国庆节', country: 'CN' },
-  '2025-10-06': { name: '中秋节', country: 'CN' },
-  '2025-01-26': { name: 'Australia Day', country: 'AU' },
-  '2025-01-27': { name: 'Aus Day Holiday', country: 'AU' },
   '2025-04-18': { name: 'Good Friday', country: 'AU' },
   '2025-04-21': { name: 'Easter Monday', country: 'AU' },
   '2025-04-25': { name: 'Anzac Day', country: 'AU' },
+  '2025-05-01': { name: '劳动节', country: 'CN' },
+  '2025-05-31': { name: '端午节', country: 'CN' },
   '2025-06-09': { name: 'King\'s Birthday', country: 'AU' },
+  '2025-10-01': { name: '国庆节', country: 'CN' },
+  '2025-10-06': { name: '中秋节', country: 'CN' },
   '2025-12-25': { name: 'Christmas', country: 'AU' },
   '2025-12-26': { name: 'Boxing Day', country: 'AU' },
+
+  // --- 2026 Holidays ---
+  '2026-01-01': { name: '元旦 / New Year', country: 'CN' },
+  '2026-01-26': { name: 'Australia Day', country: 'AU' },
+  '2026-02-16': { name: '除夕', country: 'CN' },
+  '2026-02-17': { name: '春节', country: 'CN' },
+  '2026-04-03': { name: 'Good Friday', country: 'AU' },
+  '2026-04-05': { name: '清明节', country: 'CN' },
+  '2026-04-06': { name: 'Easter Monday', country: 'AU' },
+  '2026-04-25': { name: 'Anzac Day', country: 'AU' },
+  '2026-05-01': { name: '劳动节', country: 'CN' },
+  '2026-06-08': { name: 'King\'s Birthday', country: 'AU' },
+  '2026-06-19': { name: '端午节', country: 'CN' },
+  '2026-09-25': { name: '中秋节', country: 'CN' },
+  '2026-10-01': { name: '国庆节', country: 'CN' },
+  '2026-12-25': { name: 'Christmas', country: 'AU' },
+  '2026-12-26': { name: 'Boxing Day', country: 'AU' },
 };
 
 const PRIORITY_CONFIG = {
@@ -290,14 +308,12 @@ const CalendarView = ({ groups, tasks, onEditGroup, onToggleTask, onAddTask, onD
       );
     }, [dataMap, onEditGroup, styles, isDark]); 
   
-    // --- 修复：侧边栏快速添加逻辑 ---
     const handleDrawerQuickAdd = () => {
       if (!newTaskContent.trim()) { message.warning('请输入任务内容'); return; }
       onAddTask({
         content: newTaskContent,
         deadline: selectedDate.format('YYYY-MM-DD'),
         category: newTaskCategory,
-        // 关键修复：将 groupId 包装进 linkedInfo，并处理空值
         linkedInfo: newTaskGroupId ? { groupId: newTaskGroupId } : null
       });
       setNewTaskContent('');
@@ -441,14 +457,23 @@ const CalendarView = ({ groups, tasks, onEditGroup, onToggleTask, onAddTask, onD
                 <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12}}>
                   <div style={{color: isDark ? 'rgba(255,255,255,0.5)' : '#999', fontSize: 13, textTransform: 'uppercase', letterSpacing: 1}}>截止任务 ({currentDayData.tasks.length})</div>
                 </div>
-                <List dataSource={currentDayData.tasks} renderItem={item => (
+                <List dataSource={currentDayData.tasks} renderItem={item => {
+                      // 关键修复：查找关联的团名
+                      const linkedGroup = item.linkedInfo ? groups.find(g => g.id === item.linkedInfo.groupId) : null;
+                      
+                      return (
                       <div style={{ display: 'flex', gap: 12, padding: '12px', marginBottom: 8, background: isDark ? (item.done ? 'rgba(255,255,255,0.02)' : 'rgba(30,30,30,0.8)') : (item.done ? '#f5f5f5' : '#fff'), borderRadius: 8, border: isDark ? '1px solid #303030' : '1px solid #e8e8e8', alignItems: 'flex-start', boxShadow: isDark ? 'none' : '0 1px 2px rgba(0,0,0,0.05)' }}>
                         <Checkbox checked={item.done} onChange={() => onToggleTask(item.id, item.done)} style={{marginTop: 4}} />
                         <div style={{flex: 1}}>
                           <div style={{color: isDark ? (item.done ? '#666' : '#fff') : (item.done ? '#bbb' : '#333'), textDecoration: item.done ? 'line-through' : 'none', fontSize: 14}}>{item.content}</div>
-                          <div style={{marginTop: 6, display: 'flex', gap: 8, alignItems: 'center'}}>
+                          <div style={{marginTop: 6, display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap'}}>
                             <Tag bordered={false} color={PRIORITY_CONFIG[item.category].color} style={{margin:0, fontSize:10, lineHeight:'16px', padding: '0 4px'}}>{PRIORITY_CONFIG[item.category].label}</Tag>
-                            {item.linkedInfo && <span style={{fontSize: 10, color: '#1890ff', display: 'flex', alignItems: 'center', gap: 2}}><LinkOutlined/> 关联团务</span>}
+                            {/* 显示具体的团名 */}
+                            {item.linkedInfo && (
+                                <span style={{fontSize: 10, color: '#1890ff', display: 'flex', alignItems: 'center', gap: 2, cursor: 'pointer', maxWidth: 150, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
+                                    <LinkOutlined/> {linkedGroup ? linkedGroup.name : '未知团务'}
+                                </span>
+                            )}
                           </div>
                         </div>
                         <div style={{display: 'flex', gap: 4}}>
@@ -458,7 +483,7 @@ const CalendarView = ({ groups, tasks, onEditGroup, onToggleTask, onAddTask, onD
                            </Popconfirm>
                         </div>
                       </div>
-                    )}
+                    )}}
                     locale={{emptyText: <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={<span style={{color: '#666'}}>今日无任务</span>} />}}
                 />
               </div>
