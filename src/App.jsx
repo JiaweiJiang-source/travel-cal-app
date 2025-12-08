@@ -21,8 +21,8 @@ import locale from 'antd/locale/zh_CN';
 import { createClient } from '@supabase/supabase-js'; // 导入 Supabase
 
 // --- 1. Supabase 初始化 ---
-const supabaseUrl = 'https://fzsseydudzygnpfwjxdr.supabase.co';
-const supabaseKey = 'sb_publishable_TmLQ3ZT0_HxnHvQcRvuNgg_xzjm30j2';
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseKey = import.meta.env.VITE_SUPABASE_KEY;
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 // 设置 Dayjs 本地化
