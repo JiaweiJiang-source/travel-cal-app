@@ -397,22 +397,31 @@ const CalendarView = ({ groups, tasks, onEditGroup, onToggleTask, onAddTask, onD
             </div>
           )}
 
+          
           {/* 3. 任务列表 (滚动 + 排序后) */}
           {sortedTasks.length > 0 && (
               <div 
                 className="calendar-cell-scroll"
+                // 【核心修改】在此处添加 onWheel 阻止冒泡
+                // 这将创造一个“滚动安全区”，只要鼠标在这个区域内，
+                // 无论怎么滚，都绝对不会触发外层的月份切换。
+                // 这就实现了“无级”、“丝滑”的独立滚动感。
+                onWheel={(e) => e.stopPropagation()}
+                
                 style={{ 
                     display: 'flex', 
                     flexDirection: 'column', 
                     gap: 2, 
                     flex: 1, 
-                    overflowY: 'auto', // 必须保留
+                    // 确保高度自适应，撑满剩余空间
+                    height: '100%', 
                     minHeight: 0,
-                    paddingBottom: 4   // 稍微加点底部内边距，滚动到底更舒服
+                    
+                    // 可选：添加一个细微的遮罩效果，让顶部和底部像 Apple 日历一样有淡出感
+                    // (如果不喜欢可以去掉 maskImage 这一行)
+                    maskImage: 'linear-gradient(to bottom, transparent 0%, black 5%, black 95%, transparent 100%)',
+                    WebkitMaskImage: 'linear-gradient(to bottom, transparent 0%, black 5%, black 95%, transparent 100%)'
                 }}
-                // ❌ 移除这一行： onWheel={(e) => e.stopPropagation()} 
-                // ✅ 原因：CSS 的 overscroll-behavior: contain 已经完美解决了这个问题
-                // 移除后，滚轮的物理惯性就不会被 JS 强行打断了。
               >
               {sortedTasks.map(t => (
                   <div key={t.id} style={styles.taskText(t.done, t.category)}>
@@ -457,17 +466,28 @@ const CalendarView = ({ groups, tasks, onEditGroup, onToggleTask, onAddTask, onD
       <>
         {/* 添加全局 CSS 隐藏滚动条但保留功能 */}
         <style>{`
-            .calendar-cell-scroll::-webkit-scrollbar { display: none; }
-            .calendar-cell-scroll { 
-                -ms-overflow-style: none; 
-                scrollbar-width: none; 
-                
-                /* 关键 1: 阻止滚动链，滚动到底部时不会触发父级滚动，避免"撞墙感" */
-                overscroll-behavior: contain; 
-                
-                /* 关键 2: 开启平滑惯性滚动 (iOS/Trackpad) */
-                -webkit-overflow-scrolling: touch;
-            }
+        .calendar-cell-scroll {
+            /* 1. 核心：允许垂直滚动 */
+            overflow-y: auto;
+            
+            /* 2. 隐藏滚动条但保留功能 (Mac OS 风格) */
+            scrollbar-width: none; /* Firefox */
+            -ms-overflow-style: none; /* IE/Edge */
+            
+            /* 3. 关键：阻止滚动链和橡皮筋效果波及父级 */
+            /* 这会让容器滚到底部时，像撞到棉花一样停住，而不是带动外层月份切换 */
+            overscroll-behavior: contain;
+            
+            /* 4. 开启 iOS/Mac 硬件加速的惯性滚动 */
+            -webkit-overflow-scrolling: touch;
+            
+            /* 5. 增加一点底部内边距，防止最后一个任务贴底太紧 */
+            padding-bottom: 10px;
+        }
+        
+        .calendar-cell-scroll::-webkit-scrollbar { 
+            display: none; /* Chrome/Safari */
+        }
         `}</style>
 
         <Card 
