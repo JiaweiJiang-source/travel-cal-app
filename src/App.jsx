@@ -1188,7 +1188,11 @@ const App = () => {
       taskForm.setFieldsValue({
           content: task.content,
           category: task.category,
-          deadline: dayjs(task.deadline), 
+          
+          // ❌ 原代码: deadline: dayjs(task.deadline),
+          // ✅ 修改为: 有日期才转 dayjs，没日期这就传 null (这样输入框就是空的)
+          deadline: task.deadline ? dayjs(task.deadline) : null,
+          
           groupId: task.linkedInfo ? task.linkedInfo.groupId : undefined
       });
       setTaskModalOpen(true);
