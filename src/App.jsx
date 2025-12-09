@@ -1430,10 +1430,6 @@ const CalendarView = ({ groups, tasks, onEditGroup, onToggleTask, onAddTask, onD
   //     </div>
   //   );
   // };
-  import React, { useState, useEffect } from 'react';
-  import { Input, Button, Checkbox, Tooltip } from 'antd';
-  import { DeleteOutlined, CheckSquareOutlined, FileTextOutlined } from '@ant-design/icons';
-
   // --- 终极版: 纯净书写体验 (无圆点) + Markdown + 快捷工具栏 ---
   const GroupNotepad = ({ group, onSave, isDark }) => {
     const [blocks, setBlocks] = useState(() => {
