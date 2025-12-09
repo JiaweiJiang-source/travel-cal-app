@@ -14,7 +14,8 @@ import {
   LinkOutlined, PlusCircleOutlined, ImportOutlined,
   ClearOutlined, LeftOutlined, RightOutlined,
   SunOutlined, MoonOutlined, UnorderedListOutlined, AppstoreOutlined,
-  UserOutlined, LockOutlined, LogoutOutlined, MenuOutlined
+  UserOutlined, LockOutlined, LogoutOutlined, MenuOutlined,
+  PushpinOutlined, PushpinFilled,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import 'dayjs/locale/zh-cn';
@@ -1020,6 +1021,18 @@ const CalendarView = ({ groups, tasks, onEditGroup, onToggleTask, onAddTask, onD
     const isDragging = useRef(false);
 
     const styles = getStyles(isDark);
+
+    const sortedGroups = useMemo(() => {
+        // 复制一份新数组以免影响原数据
+        return [...groups].sort((a, b) => {
+            // 如果一个置顶一个没置顶，置顶的(true)排前面(-1)
+            if (a.is_pinned !== b.is_pinned) {
+                return a.is_pinned ? -1 : 1;
+            }
+            // 如果状态一样，保持原样 (或者你可以按开始时间排序: dayjs(a.start) - dayjs(b.start))
+            return 0; 
+        });
+    }, [groups]);
   
     useEffect(() => {
       if (groups.length > 0 && (!activeGroupId || !groups.find(g => g.id === activeGroupId))) {
@@ -1114,27 +1127,63 @@ const CalendarView = ({ groups, tasks, onEditGroup, onToggleTask, onAddTask, onD
 
     const MobileGroupSelector = () => (
         <div style={{ display: 'flex', overflowX: 'auto', gap: 12, padding: '4px 0 12px 0', marginBottom: 8, scrollbarWidth: 'none' }}>
-            {groups.map(item => (
+            {sortedGroups.map(item => ( // <--- 这里改成 sortedGroups
                 <div key={item.id} onClick={() => setActiveGroupId(item.id)}
-                    style={{ padding: '8px 16px', borderRadius: 20, background: activeGroupId === item.id ? item.color : (isDark ? '#1f1f1f' : '#f0f0f0'), color: activeGroupId === item.id ? '#fff' : (isDark ? '#aaa' : '#666'), whiteSpace: 'nowrap', fontSize: 14, fontWeight: 500, boxShadow: activeGroupId === item.id ? '0 2px 6px rgba(0,0,0,0.2)' : 'none', transition: 'all 0.3s' }}>
+                    style={{ 
+                        padding: '8px 16px', 
+                        borderRadius: 20, 
+                        // 如果置顶了，给个特殊的边框或背景微调
+                        border: item.is_pinned ? `1px solid ${item.color}` : '1px solid transparent',
+                        background: activeGroupId === item.id ? item.color : (isDark ? '#1f1f1f' : '#f0f0f0'), 
+                        color: activeGroupId === item.id ? '#fff' : (isDark ? '#aaa' : '#666'), 
+                        // ... 其他样式
+                    }}>
+                    {item.is_pinned && <PushpinFilled style={{marginRight: 4}} />}
                     {item.name}
                 </div>
             ))}
         </div>
     );
-  
+
     return (
       <Row gutter={[16, 16]} style={{ height: '100%' }}>
-        {/* PC端左侧团队列表 */}
         {!isMobile && (
             <Col xs={24} md={6} style={{height: '100%'}}>
             <Card style={{...styles.glassCard, height: '100%', overflowY: 'auto'}} title={<span style={{color: isDark ? '#fff' : '#000'}}>团队列表</span>}>
-                <List dataSource={groups} renderItem={item => (
-                    <div onClick={() => setActiveGroupId(item.id)} style={{ padding: '16px', marginBottom: 12, borderRadius: 12, cursor: 'pointer', background: activeGroupId === item.id ? `linear-gradient(90deg, ${item.color}33 0%, rgba(0,0,0,0) 100%)` : (isDark ? 'rgba(255,255,255,0.05)' : '#f9f9f9'), borderLeft: activeGroupId === item.id ? `4px solid ${item.color}` : '4px solid transparent', transition: 'all 0.3s' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <div style={{ color: isDark ? '#fff' : '#333', fontWeight: 600, fontSize: 15, overflow: 'hidden', whiteSpace:'nowrap', textOverflow:'ellipsis', maxWidth: '70%' }}>{item.name}</div>
+                {/* 4. 修改 List 使用 sortedGroups */}
+                <List dataSource={sortedGroups} renderItem={item => ( // <--- 这里改成 sortedGroups
+                    <div onClick={() => setActiveGroupId(item.id)} style={{ 
+                        padding: '16px', 
+                        marginBottom: 12, 
+                        borderRadius: 12, 
+                        cursor: 'pointer', 
+                        background: activeGroupId === item.id ? `linear-gradient(90deg, ${item.color}33 0%, rgba(0,0,0,0) 100%)` : (isDark ? 'rgba(255,255,255,0.05)' : '#f9f9f9'), 
+                        borderLeft: activeGroupId === item.id ? `4px solid ${item.color}` : '4px solid transparent', 
+                        transition: 'all 0.3s',
+                        position: 'relative' // 为绝对定位图标做准备
+                    }}>
+                    
+                    {/* 5. 【新增】置顶按钮 (绝对定位在右上角) */}
+                    <div 
+                        onClick={(e) => { e.stopPropagation(); onTogglePin(item); }} 
+                        style={{
+                            position: 'absolute', top: 8, right: 8, 
+                            padding: 6, cursor: 'pointer', 
+                            color: item.is_pinned ? '#1890ff' : (isDark ? '#666' : '#ccc'),
+                            zIndex: 10
+                        }}
+                    >
+                        {item.is_pinned ? <PushpinFilled /> : <PushpinOutlined />}
                     </div>
-                    <div style={{ color: isDark ? 'rgba(255,255,255,0.5)' : '#999', fontSize: 12, marginTop: 4 }}>{item.start} 出发</div>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div style={{ color: isDark ? '#fff' : '#333', fontWeight: 600, fontSize: 15, maxWidth: '85%' }}>
+                            {item.name}
+                        </div>
+                    </div>
+                    <div style={{ color: isDark ? 'rgba(255,255,255,0.5)' : '#999', fontSize: 12, marginTop: 4 }}>
+                        {item.start} 出发
+                    </div>
                     </div>
                 )} />
             </Card>
@@ -1307,6 +1356,28 @@ const App = () => {
   const screens = useBreakpoint();
   const isMobile = (screens.xs || !screens.md); // 适配逻辑增强：XS或非MD以上视为Mobile
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // 1. 【新增】处理置顶的函数
+  const handleTogglePin = async (group) => {
+      const newStatus = !group.is_pinned;
+      
+      // 乐观更新 (先改界面，感觉快)
+      setGroups(prev => prev.map(g => g.id === group.id ? { ...g, is_pinned: newStatus } : g));
+
+      // 提交到数据库
+      const { error } = await supabase
+          .from('groups')
+          .update({ is_pinned: newStatus })
+          .eq('id', group.id);
+
+      if (error) {
+          message.error('置顶状态更新失败');
+          // 回滚
+          setGroups(prev => prev.map(g => g.id === group.id ? { ...g, is_pinned: !newStatus } : g));
+      } else {
+          message.success(newStatus ? '已置顶' : '已取消置顶');
+      }
+  };
 
   // 3. 监听登录状态
   useEffect(() => {
@@ -1600,6 +1671,7 @@ const App = () => {
                     isDark={isDarkMode} 
                     isMobile={isMobile} 
                     onUpdateGroup={handleUpdateGroupLocal}
+                    onTogglePin={handleTogglePin}
                 />
             )}
           </Content>
