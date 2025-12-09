@@ -1471,10 +1471,11 @@ const CalendarView = ({ groups, tasks, onEditGroup, onToggleTask, onAddTask, onD
                       destroyOnClose
                   >
                       <div style={{marginBottom: 12, color: '#999', fontSize: 13}}>
-                          请按行输入，每行必须包含一个日期 (YYYY-MM-DD)。<br/>
+                          请按行输入，每行必须包含一个日期 (YYYY-MM-DD/YYYYMMDD)。<br/>
                           例如：<br/>
                           1. 发送email, 2025-12-10<br/>
-                          2. 预定酒店 2025-12-15
+                          2. 预定酒店 2025-12-15<br/>
+                          3. 购买机票 20251220
                       </div>
                       <Input.TextArea 
                           rows={8} 
