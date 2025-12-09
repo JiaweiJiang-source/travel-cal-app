@@ -16,7 +16,8 @@ import {
   SunOutlined, MoonOutlined, UnorderedListOutlined, AppstoreOutlined,
   UserOutlined, LockOutlined, LogoutOutlined, MenuOutlined,
   PushpinOutlined, PushpinFilled,
-  CloseCircleOutlined
+  CloseCircleOutlined,
+  ImportOutlined
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import 'dayjs/locale/zh-cn';
@@ -1010,7 +1011,7 @@ const CalendarView = ({ groups, tasks, onEditGroup, onToggleTask, onAddTask, onD
   };
 
 
-  const WorkflowTracker = ({ groups, tasks, onToggleTask, onAddQuickTask, onDelete, onEdit, isDark, isMobile, onUpdateGroup, onTogglePin }) => {
+  const WorkflowTracker = ({ groups, tasks, onToggleTask, onAddQuickTask, onDelete, onEdit, isDark, isMobile, onUpdateGroup, onTogglePin, onImportTasks }) => {
     const [activeGroupId, setActiveGroupId] = useState(null);
     const [quickCategory, setQuickCategory] = useState('reminder'); 
     const [quickContent, setQuickContent] = useState('');
@@ -1058,6 +1059,57 @@ const CalendarView = ({ groups, tasks, onEditGroup, onToggleTask, onAddTask, onD
             // 这里我们暂时假设你重新 fetch 或者接受这种“后台静默保存”。
             // *为了立刻生效*，我们可以手动修改本地 tasks 数组引用（虽然不推荐但管用）:
             task.linkedInfo = newLinkedInfo; 
+        }
+    };
+
+    // --- 新增：导入弹窗状态 ---
+    const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+    const [importText, setImportText] = useState('');
+
+    // --- 新增：解析并导入逻辑 ---
+    const handleBulkImport = () => {
+        if (!importText.trim()) return;
+
+        const lines = importText.split('\n');
+        const parsedTasks = [];
+
+        lines.forEach(line => {
+            const cleanLine = line.trim();
+            if (!cleanLine) return;
+
+            // 1. 提取日期 (支持 YYYY-MM-DD, YYYY/MM/DD, YYYY.MM.DD)
+            const dateRegex = /(\d{4}[-./]\d{1,2}[-./]\d{1,2})/;
+            const dateMatch = cleanLine.match(dateRegex);
+
+            if (dateMatch) {
+                const deadline = dayjs(dateMatch[0]).format('YYYY-MM-DD');
+                
+                // 2. 提取内容 (把日期删掉，把前面的 "1. ", "2. " 删掉)
+                let content = cleanLine
+                    .replace(dateMatch[0], '')     // 删掉日期
+                    .replace(/^[\d]+\./, '')       // 删掉 "1."
+                    .replace(/^[\d]+、/, '')       // 删掉 "1、"
+                    .replace(/[,，\s]+$/, '')      // 删掉末尾标点
+                    .replace(/^[,，\s]+/, '')      // 删掉开头标点
+                    .trim();
+
+                if (content) {
+                    parsedTasks.push({
+                        content: content,
+                        deadline: deadline,
+                        category: 'important', // 默认为重要
+                        linkedInfo: { groupId: activeGroupId }
+                    });
+                }
+            }
+        });
+
+        if (parsedTasks.length > 0) {
+            onImportTasks(parsedTasks);
+            setIsImportModalOpen(false);
+            setImportText('');
+        } else {
+            message.warning('未能识别出有效格式，请确保包含 "YYYY-MM-DD" 格式的日期');
         }
     };
 
@@ -1337,8 +1389,21 @@ const CalendarView = ({ groups, tasks, onEditGroup, onToggleTask, onAddTask, onD
                   
                   {/* === 左侧：时间轴 (固定) === */}
                   <Col xs={24} md={12} style={{height: '100%', overflowY: 'auto', paddingRight: 12, borderRight: isMobile ? 'none' : (isDark ? '1px solid #333' : '1px solid #f0f0f0')}}>
-                      <div style={{marginBottom: 16, fontWeight: 'bold', color: isDark ? '#fff' : '#333', display:'flex', alignItems:'center', gap: 8}}>
-                          <ClockCircleOutlined /> 关键节点进度 ({timelineTasks.length})
+                      {/* ✅ Step 3: 修改这里的标题栏，加入导入按钮 */}
+                      <div style={{marginBottom: 16, display:'flex', alignItems:'center', justifyContent: 'space-between'}}>
+                          <div style={{fontWeight: 'bold', color: isDark ? '#fff' : '#333', display:'flex', alignItems:'center', gap: 8}}>
+                              <ClockCircleOutlined /> 关键节点进度 ({timelineTasks.length})
+                          </div>
+                          <Tooltip title="批量导入 (格式: 事件, 2025-12-01)">
+                              <Button 
+                                type="dashed" 
+                                size="small" 
+                                icon={<ImportOutlined />} 
+                                onClick={() => setIsImportModalOpen(true)}
+                              >
+                                  导入
+                              </Button>
+                          </Tooltip>
                       </div>
                       {timelineTasks.length > 0 ? (
                           <Steps 
@@ -1381,6 +1446,30 @@ const CalendarView = ({ groups, tasks, onEditGroup, onToggleTask, onAddTask, onD
                       ) : <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={<span style={{color: '#999'}}>暂无时间节点</span>} />}
 
                   </Col>
+
+                  {/* ✅ Step 4: 添加 Import Modal */}
+                  <Modal
+                      title="批量导入关键节点"
+                      open={isImportModalOpen}
+                      onCancel={() => setIsImportModalOpen(false)}
+                      onOk={handleBulkImport}
+                      okText="开始识别并导入"
+                      cancelText="取消"
+                      destroyOnClose
+                  >
+                      <div style={{marginBottom: 12, color: '#999', fontSize: 13}}>
+                          请按行输入，每行必须包含一个日期 (YYYY-MM-DD)。<br/>
+                          例如：<br/>
+                          1. 发送Offer邮件, 2025-12-10<br/>
+                          2. 预定酒店 2025-12-15
+                      </div>
+                      <Input.TextArea 
+                          rows={8} 
+                          value={importText} 
+                          onChange={e => setImportText(e.target.value)} 
+                          placeholder="在此粘贴文本..."
+                      />
+                  </Modal>
 
                   {/* === 右侧：垂直排列 + 拖拽调整 === */}
                   <Col xs={24} md={12} style={{height: '100%', marginTop: isMobile ? 24 : 0}}>
@@ -1693,6 +1782,29 @@ const App = () => {
       setTasks(prev => [...prev, finalTask]);
       message.success('任务已添加');
   };
+
+  // --- 新增：批量导入任务 ---
+  const handleImportTasks = async (newTasksArray) => {
+      // 1. 为每个任务加上 ID 和 用户ID
+      const tasksToInsert = newTasksArray.map(t => ({
+          ...t,
+          id: Date.now() + Math.random(), // 防止毫秒级冲突
+          done: false,
+          user_id: session.user.id
+      }));
+
+      // 2. 存入 Supabase
+      const { error } = await supabase.from('tasks').insert(tasksToInsert);
+      
+      if (error) {
+          message.error('导入失败: ' + error.message);
+          return;
+      }
+
+      // 3. 更新本地状态
+      setTasks(prev => [...prev, ...tasksToInsert]);
+      message.success(`成功导入 ${tasksToInsert.length} 个节点`);
+  };
   
   const handleSignOut = async () => {
       // ⚡️ 核心修改：添加 { scope: 'local' }
@@ -1794,6 +1906,7 @@ const App = () => {
                     isMobile={isMobile} 
                     onUpdateGroup={handleUpdateGroupLocal}
                     onTogglePin={handleTogglePin}
+                    onImportTasks={handleImportTasks}
                 />
             )}
           </Content>
