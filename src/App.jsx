@@ -1035,6 +1035,43 @@ const CalendarView = ({ groups, tasks, onEditGroup, onToggleTask, onAddTask, onD
         });
     }, [groups]);
     
+    // 1. 【新增】单个节点的备注输入组件
+    const TaskNoteInput = ({ task, onSave, isDark }) => {
+        const [val, setVal] = useState(task.linkedInfo?.note || '');
+        
+        // 监听外部数据变化 (例如切换团队时)
+        useEffect(() => {
+            setVal(task.linkedInfo?.note || '');
+        }, [task.id, task.linkedInfo]);
+
+        const handleBlur = () => {
+            if (val !== (task.linkedInfo?.note || '')) {
+                onSave(task.id, val);
+            }
+        };
+
+        return (
+            <Input 
+                size="small"
+                placeholder="添加备注..."
+                value={val}
+                onChange={e => setVal(e.target.value)}
+                onBlur={handleBlur} // 失去焦点自动保存
+                onPressEnter={(e) => { e.target.blur(); }} // 回车也保存
+                bordered={false} // 平时不显示边框，看起来更干净
+                style={{
+                    fontSize: 12,
+                    color: isDark ? '#aaa' : '#666',
+                    padding: '0 4px',
+                    marginTop: 4,
+                    background: isDark ? 'rgba(255,255,255,0.05)' : '#f5f5f5',
+                    borderRadius: 4,
+                    width: '100%'
+                }}
+            />
+        );
+    };
+
     // --- 新增：节点备注逻辑 ---
     const [nodeNote, setNodeNote] = useState('');
 
