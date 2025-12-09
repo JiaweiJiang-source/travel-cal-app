@@ -16,6 +16,7 @@ import {
   SunOutlined, MoonOutlined, UnorderedListOutlined, AppstoreOutlined,
   UserOutlined, LockOutlined, LogoutOutlined, MenuOutlined,
   PushpinOutlined, PushpinFilled,
+  CloseCircleOutlined
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import 'dayjs/locale/zh-cn';
@@ -1033,7 +1034,47 @@ const CalendarView = ({ groups, tasks, onEditGroup, onToggleTask, onAddTask, onD
             return 0; 
         });
     }, [groups]);
-  
+    
+    // --- 新增：节点备注逻辑 ---
+    const [nodeNote, setNodeNote] = useState('');
+
+    const handleAddNodeNote = async () => {
+        if (!nodeNote.trim()) return;
+        
+        // 1. 获取旧数据 (如果没有就是空数组)
+        const oldNotes = activeGroup.milestone_notes || [];
+        const newNoteObj = { id: Date.now(), content: nodeNote };
+        const newNotes = [...oldNotes, newNoteObj];
+
+        // 2. 清空输入框
+        setNodeNote('');
+
+        // 3. 乐观更新本地 (让界面马上变)
+        if (onUpdateGroup) {
+            onUpdateGroup(activeGroup.id, { milestone_notes: newNotes });
+        }
+
+        // 4. 静默保存到数据库
+        const { error } = await supabase
+            .from('groups')
+            .update({ milestone_notes: newNotes })
+            .eq('id', activeGroup.id);
+            
+        if (error) message.error('备注保存失败');
+    };
+
+    const handleDeleteNodeNote = async (noteId) => {
+        const oldNotes = activeGroup.milestone_notes || [];
+        const newNotes = oldNotes.filter(n => n.id !== noteId);
+
+        // 更新本地
+        if (onUpdateGroup) {
+            onUpdateGroup(activeGroup.id, { milestone_notes: newNotes });
+        }
+        // 更新数据库
+        await supabase.from('groups').update({ milestone_notes: newNotes }).eq('id', activeGroup.id);
+    };
+
     useEffect(() => {
       if (groups.length > 0 && (!activeGroupId || !groups.find(g => g.id === activeGroupId))) {
         setActiveGroupId(groups[0].id);
@@ -1258,6 +1299,56 @@ const CalendarView = ({ groups, tasks, onEditGroup, onToggleTask, onAddTask, onD
                               })}
                           />
                       ) : <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={<span style={{color: '#999'}}>暂无时间节点</span>} />}
+
+                      <div style={{ marginTop: 32, paddingTop: 16, borderTop: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e8e8e8' }}>
+                          <div style={{ fontSize: 13, fontWeight: 'bold', color: isDark ? '#aaa' : '#999', marginBottom: 8, display: 'flex', justifyContent: 'space-between' }}>
+                              <span>节点备注 (仅本团)</span>
+                              <span style={{fontSize: 10, fontWeight: 'normal'}}>{(activeGroup.milestone_notes || []).length} 条</span>
+                          </div>
+                          
+                          {/* 输入框 */}
+                          <Input 
+                              placeholder="输入备注，按回车添加..." 
+                              value={nodeNote}
+                              onChange={e => setNodeNote(e.target.value)}
+                              onPressEnter={handleAddNodeNote}
+                              maxLength={50}
+                              style={{
+                                  marginBottom: 12, 
+                                  background: isDark ? 'rgba(255,255,255,0.05)' : '#fff',
+                                  border: isDark ? '1px solid #444' : '1px solid #d9d9d9',
+                                  color: isDark ? '#fff' : '#000'
+                              }}
+                              suffix={<span style={{fontSize: 10, color: isDark ? '#666' : '#ccc'}}>Enter</span>}
+                          />
+
+                          {/* 备注列表 */}
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                              {(activeGroup.milestone_notes || []).map(note => (
+                                  <div key={note.id} style={{
+                                      display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                                      padding: '8px 12px',
+                                      background: isDark ? 'rgba(255,255,255,0.03)' : '#f5f5f5',
+                                      borderRadius: 6,
+                                      fontSize: 13,
+                                      color: isDark ? '#ddd' : '#555',
+                                      transition: 'all 0.2s',
+                                      border: isDark ? '1px solid transparent' : '1px solid #f0f0f0'
+                                  }}>
+                                      <span style={{flex: 1, wordBreak: 'break-all'}}>{note.content}</span>
+                                      <CloseCircleOutlined 
+                                          onClick={() => handleDeleteNodeNote(note.id)} 
+                                          style={{ cursor: 'pointer', color: '#999', fontSize: 14, marginLeft: 8 }} 
+                                          onMouseEnter={e => e.target.style.color = '#ff4d4f'}
+                                          onMouseLeave={e => e.target.style.color = '#999'}
+                                      />
+                                  </div>
+                              ))}
+                              {(activeGroup.milestone_notes || []).length === 0 && (
+                                  <div style={{ fontSize: 12, color: '#ccc', textAlign: 'center', padding: 10, border: '1px dashed #444', borderRadius: 6 }}>暂无备注</div>
+                              )}
+                          </div>
+                      </div>
                   </Col>
 
                   {/* === 右侧：垂直排列 + 拖拽调整 === */}
