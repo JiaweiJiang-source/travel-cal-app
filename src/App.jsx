@@ -1435,7 +1435,11 @@ const CalendarView = ({ groups, tasks, onEditGroup, onToggleTask, onAddTask, onD
     const [blocks, setBlocks] = useState(() => {
       // 1. 尝试从数据库加载数据
       if (group.memo_data && Array.isArray(group.memo_data) && group.memo_data.length > 0) {
-        return group.memo_data.map(b => ({ ...b, type: b.type || (b.checked !== undefined ? 'todo' : 'text') }));
+        // 这里的 map 很重要，确保旧数据也有 type 字段
+        return group.memo_data.map(b => ({ 
+            ...b, 
+            type: b.type || (b.checked !== undefined ? 'todo' : 'text') 
+        }));
       }
       // 2. 如果是新团，初始化默认内容
       const baseId = Date.now();
@@ -2295,8 +2299,18 @@ const CalendarView = ({ groups, tasks, onEditGroup, onToggleTask, onAddTask, onD
     };
 
     const handleSaveMemo = async (groupId, memoData) => {
+       // A. 立即更新本地状态 (这样切换页面就不会丢了)
+       if (onUpdateGroup) {
+           onUpdateGroup(groupId, { memo_data: memoData });
+       }
+
+       // B. 异步更新数据库 (静默保存)
        const { error } = await supabase.from('groups').update({ memo_data: memoData }).eq('id', groupId);
-       if (error) console.error("保存备忘失败", error);
+       
+       if (error) {
+           console.error("保存备忘失败", error);
+           message.error("云端同步失败，请检查网络");
+       }
     };
 
     const MobileGroupSelector = () => (
@@ -2601,6 +2615,12 @@ const App = () => {
       message.success('团队已删除');
   };
   
+  const handleUpdateGroupLocal = (groupId, newData) => {
+    setGroups(prevGroups => 
+      prevGroups.map(g => g.id === groupId ? { ...g, ...newData } : g)
+    );
+  };
+
   const openCreateTask = () => {
       setEditingTask(null);
       taskForm.resetFields();
@@ -2780,6 +2800,7 @@ const App = () => {
                     onEdit={openEditTask}
                     isDark={isDarkMode} 
                     isMobile={isMobile} 
+                    onUpdateGroup={handleUpdateGroupLocal}
                 />
             )}
           </Content>
