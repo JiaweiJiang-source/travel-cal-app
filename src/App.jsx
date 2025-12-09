@@ -1091,7 +1091,7 @@ const CalendarView = ({ groups, tasks, onEditGroup, onToggleTask, onAddTask, onD
         return (
             <Input 
                 size="small"
-                placeholder="enter保存..."
+                placeholder="enter"
                 value={val}
                 onChange={e => setVal(e.target.value)}
                 onBlur={handleBlur} // 失去焦点自动保存
