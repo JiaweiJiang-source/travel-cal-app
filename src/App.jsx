@@ -1009,7 +1009,7 @@ const CalendarView = ({ groups, tasks, onEditGroup, onToggleTask, onAddTask, onD
   };
 
 
-  const WorkflowTracker = ({ groups, tasks, onToggleTask, onAddQuickTask, onDelete, onEdit, isDark, isMobile, onUpdateGroup }) => {
+  const WorkflowTracker = ({ groups, tasks, onToggleTask, onAddQuickTask, onDelete, onEdit, isDark, isMobile, onUpdateGroup, onTogglePin }) => {
     const [activeGroupId, setActiveGroupId] = useState(null);
     const [quickCategory, setQuickCategory] = useState('reminder'); 
     const [quickContent, setQuickContent] = useState('');
