@@ -1091,7 +1091,7 @@ const CalendarView = ({ groups, tasks, onEditGroup, onToggleTask, onAddTask, onD
         return (
             <Input 
                 size="small"
-                placeholder="添加备注..."
+                placeholder="添加备注, enter保存..."
                 value={val}
                 onChange={e => setVal(e.target.value)}
                 onBlur={handleBlur} // 失去焦点自动保存
@@ -1371,12 +1371,8 @@ const CalendarView = ({ groups, tasks, onEditGroup, onToggleTask, onAddTask, onD
                                       ),
                                       // 3. 【修改】这里插入我们的备注框
                                       description: (
-                                          <div style={{marginTop: 4, marginBottom: 12}}>
-                                              <TaskNoteInput 
-                                                  task={task} 
-                                                  onSave={handleSaveTaskNote} 
-                                                  isDark={isDark} 
-                                              />
+                                          <div style={{marginTop: 4}}>
+                                              <TaskNoteInput task={task} onSave={handleSaveTaskNote} isDark={isDark} />
                                           </div>
                                       )
                                   }
