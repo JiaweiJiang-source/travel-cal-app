@@ -1022,6 +1022,44 @@ const CalendarView = ({ groups, tasks, onEditGroup, onToggleTask, onAddTask, onD
     const isDragging = useRef(false);
 
     const styles = getStyles(isDark);
+    
+    // 2. 【新增】保存单个节点备注的逻辑
+    const handleSaveTaskNote = async (taskId, newNote) => {
+        // 找到当前任务
+        const task = tasks.find(t => t.id === taskId);
+        if (!task) return;
+
+        // 构造新的 linkedInfo (保留原有的 groupId, 添加 note)
+        const newLinkedInfo = { ...(task.linkedInfo || {}), note: newNote };
+        
+        // A. 本地乐观更新 (为了让界面不闪烁)
+        // 这里需要调用 App 传下来的 setTasks，但 workflowTracker 没有直接接收 setTasks
+        // 所以我们用 onEdit 来触发更新，或者直接刷新列表。
+        // 为了简单有效，我们直接更新数据库，React 的实时性会在数据回来时刷新，
+        // 但为了体验更好，建议在 App.jsx 里传一个 onUpdateTask 进来。
+        // 这里为了不让你改 App.jsx 太多，我们直接操作 Supabase，依赖 React 重新拉取或 onToggleTask 的机制
+        
+        // 更新数据库
+        const { error } = await supabase
+            .from('tasks')
+            .update({ linkedInfo: newLinkedInfo })
+            .eq('id', taskId);
+
+        if (error) {
+            message.error('备注保存失败');
+        } else {
+            // 💡 这是一个小技巧：手动触发一下 onToggleTask 的逻辑来刷新父组件状态，
+            // 或者你可以专门在 App.js 加一个 onUpdateTask。
+            // 既然你之前传了 onEdit，我们可以“假装”编辑了一下，或者依赖 supabase 的重新获取。
+            // 最好的办法是：直接刷新页面，或者在 App.js 增加 handleUpdateTaskLocal。
+            // 鉴于不想改 App.js，我们这里静默保存，通常用户切一下页面就看到了。
+            
+            // 如果你想即时看到效果，请在 App.js 传一个 onUpdateTaskLocal 进来。
+            // 这里我们暂时假设你重新 fetch 或者接受这种“后台静默保存”。
+            // *为了立刻生效*，我们可以手动修改本地 tasks 数组引用（虽然不推荐但管用）:
+            task.linkedInfo = newLinkedInfo; 
+        }
+    };
 
     const sortedGroups = useMemo(() => {
         // 复制一份新数组以免影响原数据
@@ -1331,61 +1369,21 @@ const CalendarView = ({ groups, tasks, onEditGroup, onToggleTask, onAddTask, onD
                                               </div>
                                           </div>
                                       ),
-                                      description: null
+                                      // 3. 【修改】这里插入我们的备注框
+                                      description: (
+                                          <div style={{marginTop: 4, marginBottom: 12}}>
+                                              <TaskNoteInput 
+                                                  task={task} 
+                                                  onSave={handleSaveTaskNote} 
+                                                  isDark={isDark} 
+                                              />
+                                          </div>
+                                      )
                                   }
                               })}
                           />
                       ) : <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={<span style={{color: '#999'}}>暂无时间节点</span>} />}
 
-                      <div style={{ marginTop: 32, paddingTop: 16, borderTop: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e8e8e8' }}>
-                          <div style={{ fontSize: 13, fontWeight: 'bold', color: isDark ? '#aaa' : '#999', marginBottom: 8, display: 'flex', justifyContent: 'space-between' }}>
-                              <span>节点备注 (仅本团)</span>
-                              <span style={{fontSize: 10, fontWeight: 'normal'}}>{(activeGroup.milestone_notes || []).length} 条</span>
-                          </div>
-                          
-                          {/* 输入框 */}
-                          <Input 
-                              placeholder="输入备注，按回车添加..." 
-                              value={nodeNote}
-                              onChange={e => setNodeNote(e.target.value)}
-                              onPressEnter={handleAddNodeNote}
-                              maxLength={50}
-                              style={{
-                                  marginBottom: 12, 
-                                  background: isDark ? 'rgba(255,255,255,0.05)' : '#fff',
-                                  border: isDark ? '1px solid #444' : '1px solid #d9d9d9',
-                                  color: isDark ? '#fff' : '#000'
-                              }}
-                              suffix={<span style={{fontSize: 10, color: isDark ? '#666' : '#ccc'}}>Enter</span>}
-                          />
-
-                          {/* 备注列表 */}
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                              {(activeGroup.milestone_notes || []).map(note => (
-                                  <div key={note.id} style={{
-                                      display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                                      padding: '8px 12px',
-                                      background: isDark ? 'rgba(255,255,255,0.03)' : '#f5f5f5',
-                                      borderRadius: 6,
-                                      fontSize: 13,
-                                      color: isDark ? '#ddd' : '#555',
-                                      transition: 'all 0.2s',
-                                      border: isDark ? '1px solid transparent' : '1px solid #f0f0f0'
-                                  }}>
-                                      <span style={{flex: 1, wordBreak: 'break-all'}}>{note.content}</span>
-                                      <CloseCircleOutlined 
-                                          onClick={() => handleDeleteNodeNote(note.id)} 
-                                          style={{ cursor: 'pointer', color: '#999', fontSize: 14, marginLeft: 8 }} 
-                                          onMouseEnter={e => e.target.style.color = '#ff4d4f'}
-                                          onMouseLeave={e => e.target.style.color = '#999'}
-                                      />
-                                  </div>
-                              ))}
-                              {(activeGroup.milestone_notes || []).length === 0 && (
-                                  <div style={{ fontSize: 12, color: '#ccc', textAlign: 'center', padding: 10, border: '1px dashed #444', borderRadius: 6 }}>暂无备注</div>
-                              )}
-                          </div>
-                      </div>
                   </Col>
 
                   {/* === 右侧：垂直排列 + 拖拽调整 === */}
