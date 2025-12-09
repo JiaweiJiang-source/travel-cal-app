@@ -17,7 +17,6 @@ import {
   UserOutlined, LockOutlined, LogoutOutlined, MenuOutlined,
   PushpinOutlined, PushpinFilled,
   CloseCircleOutlined,
-  ImportOutlined
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import 'dayjs/locale/zh-cn';
