@@ -1783,11 +1783,15 @@ const App = () => {
   };
 
   // --- 新增：批量导入任务 ---
+  // --- 新增：批量导入任务 ---
   const handleImportTasks = async (newTasksArray) => {
       // 1. 为每个任务加上 ID 和 用户ID
-      const tasksToInsert = newTasksArray.map(t => ({
+      const tasksToInsert = newTasksArray.map((t, index) => ({
           ...t,
-          id: Date.now() + Math.random(), // 防止毫秒级冲突
+          // ✅ 修复：使用整数 ID。
+          // Date.now() 是毫秒整数，加上 index 防止批量插入时 ID 重复，
+          // 再加上一个随机整数防止与旧数据冲突。
+          id: Date.now() + index + Math.floor(Math.random() * 1000), 
           done: false,
           user_id: session.user.id
       }));
@@ -1796,6 +1800,7 @@ const App = () => {
       const { error } = await supabase.from('tasks').insert(tasksToInsert);
       
       if (error) {
+          console.error(error); // 打印详细错误方便调试
           message.error('导入失败: ' + error.message);
           return;
       }
