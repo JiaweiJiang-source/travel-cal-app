@@ -1065,7 +1065,7 @@ const CalendarView = ({ groups, tasks, onEditGroup, onToggleTask, onAddTask, onD
     const [isImportModalOpen, setIsImportModalOpen] = useState(false);
     const [importText, setImportText] = useState('');
 
-    // --- 新增：解析并导入逻辑 ---
+    // --- 修改后：解析并导入逻辑 (支持 YYYYMMDD) ---
     const handleBulkImport = () => {
         if (!importText.trim()) return;
 
@@ -1076,27 +1076,41 @@ const CalendarView = ({ groups, tasks, onEditGroup, onToggleTask, onAddTask, onD
             const cleanLine = line.trim();
             if (!cleanLine) return;
 
-            // 1. 提取日期 (支持 YYYY-MM-DD, YYYY/MM/DD, YYYY.MM.DD)
-            const dateRegex = /(\d{4}[-./]\d{1,2}[-./]\d{1,2})/;
+            // ✅ 修改 1: 正则表达式升级
+            // 解释: (标准分隔符格式) | (8位纯数字格式)
+            // 例子: 2025-12-01, 2025/12/01, 2025.12.01, 20251201
+            const dateRegex = /((\d{4}[-./]\d{1,2}[-./]\d{1,2})|(\d{8}))/;
             const dateMatch = cleanLine.match(dateRegex);
 
             if (dateMatch) {
-                const deadline = dayjs(dateMatch[0]).format('YYYY-MM-DD');
+                const rawDate = dateMatch[0];
+                let deadline;
+
+                // ✅ 修改 2: 处理纯数字格式 (例如 20251201)
+                // Dayjs 默认不认 8位数字，所以我们手动插杠变成 2025-12-01
+                if (/^\d{8}$/.test(rawDate)) {
+                    const fmt = `${rawDate.slice(0, 4)}-${rawDate.slice(4, 6)}-${rawDate.slice(6, 8)}`;
+                    deadline = dayjs(fmt).format('YYYY-MM-DD');
+                } else {
+                    // 标准格式直接解析
+                    deadline = dayjs(rawDate).format('YYYY-MM-DD');
+                }
                 
-                // 2. 提取内容 (把日期删掉，把前面的 "1. ", "2. " 删掉)
+                // 3. 提取内容 (把日期删掉，把前面的 "1. ", "2. " 删掉)
                 let content = cleanLine
-                    .replace(dateMatch[0], '')     // 删掉日期
+                    .replace(rawDate, '')          // 删掉日期字符串
                     .replace(/^[\d]+\./, '')       // 删掉 "1."
                     .replace(/^[\d]+、/, '')       // 删掉 "1、"
                     .replace(/[,，\s]+$/, '')      // 删掉末尾标点
                     .replace(/^[,，\s]+/, '')      // 删掉开头标点
                     .trim();
 
-                if (content) {
+                // 检查一下日期是否有效 (避免 20251332 这种错误日期)
+                if (content && deadline !== 'Invalid Date') {
                     parsedTasks.push({
                         content: content,
                         deadline: deadline,
-                        category: 'important', // 默认为重要
+                        category: 'important', 
                         linkedInfo: { groupId: activeGroupId }
                     });
                 }
@@ -1108,7 +1122,7 @@ const CalendarView = ({ groups, tasks, onEditGroup, onToggleTask, onAddTask, onD
             setIsImportModalOpen(false);
             setImportText('');
         } else {
-            message.warning('未能识别出有效格式，请确保包含 "YYYY-MM-DD" 格式的日期');
+            message.warning('未识别到有效日期，请检查格式 (支持 YYYY-MM-DD 或 YYYYMMDD)');
         }
     };
 
@@ -1459,7 +1473,7 @@ const CalendarView = ({ groups, tasks, onEditGroup, onToggleTask, onAddTask, onD
                       <div style={{marginBottom: 12, color: '#999', fontSize: 13}}>
                           请按行输入，每行必须包含一个日期 (YYYY-MM-DD)。<br/>
                           例如：<br/>
-                          1. 发送Offer邮件, 2025-12-10<br/>
+                          1. 发送email, 2025-12-10<br/>
                           2. 预定酒店 2025-12-15
                       </div>
                       <Input.TextArea 
