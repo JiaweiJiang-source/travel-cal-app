@@ -1253,11 +1253,195 @@ const CalendarView = ({ groups, tasks, onEditGroup, onToggleTask, onAddTask, onD
   //   );
   // };
   // --- 终极版: 纯净书写体验 (无圆点) + Markdown + 快捷工具栏 ---
+  // const GroupNotepad = ({ group, onSave, isDark }) => {
+  //   const [blocks, setBlocks] = useState(() => {
+  //     if (group.memo_data && Array.isArray(group.memo_data) && group.memo_data.length > 0) {
+  //       return group.memo_data.map(b => ({ ...b, type: b.type || (b.checked !== undefined ? 'todo' : 'text') }));
+  //     }
+  //     const baseId = Date.now();
+  //     return [
+  //       { id: baseId,     content: '行程大纲', type: 'h1', level: 0, checked: false },
+  //       { id: baseId + 1, content: '纯文本记录 (无圆点)', type: 'text', level: 0, checked: false },
+  //       { id: baseId + 2, content: '预定酒店', type: 'todo', level: 0, checked: false },
+  //     ];
+  //   });
+
+  //   // 自动保存
+  //   useEffect(() => {
+  //     const timer = setTimeout(() => {
+  //       onSave(group.id, blocks);
+  //     }, 1000); 
+  //     return () => clearTimeout(timer);
+  //   }, [blocks, group.id]);
+
+  //   const updateBlock = (id, updates) => {
+  //     setBlocks(prev => prev.map(b => b.id === id ? { ...b, ...updates } : b));
+  //   };
+
+  //   const handleInputChange = (e, id, type) => {
+  //     let val = e.target.value;
+      
+  //     // Markdown 触发逻辑
+  //     if (type === 'text' || type === 'todo') {
+  //         if (val.startsWith('# ')) {
+  //             updateBlock(id, { content: val.slice(2), type: 'h1' }); 
+  //             return;
+  //         }
+  //         if (val.startsWith('## ')) {
+  //             updateBlock(id, { content: val.slice(3), type: 'h2' }); 
+  //             return;
+  //         }
+  //         if (val.startsWith('[] ') || val.startsWith('【】 ')) {
+  //             updateBlock(id, { content: val.slice(3), type: 'todo' }); 
+  //             return;
+  //         }
+  //     }
+  //     updateBlock(id, { content: val });
+  //   };
+
+  //   const handleKeyDown = (e, index, id, currentType) => {
+  //     if (e.key === 'Enter') {
+  //       e.preventDefault();
+  //       // 智能回车：标题后回车变文本，待办后回车还是待办
+  //       const nextType = (currentType === 'h1' || currentType === 'h2') ? 'text' : currentType;
+        
+  //       const newBlock = { id: Date.now(), content: '', level: blocks[index].level, type: nextType, checked: false };
+  //       const newBlocks = [...blocks];
+  //       newBlocks.splice(index + 1, 0, newBlock);
+  //       setBlocks(newBlocks);
+  //       setTimeout(() => document.getElementById(`note-input-${newBlock.id}`)?.focus(), 0);
+  //     } 
+  //     else if (e.key === 'Backspace') {
+  //       if (blocks[index].content === '') {
+  //           if (currentType !== 'text') {
+  //               e.preventDefault();
+  //               updateBlock(id, { type: 'text' }); // 空行退格：变回普通文本
+  //               return;
+  //           }
+  //           e.preventDefault();
+  //           if (blocks.length > 1) {
+  //             const newBlocks = blocks.filter(b => b.id !== id);
+  //             setBlocks(newBlocks);
+  //             setTimeout(() => document.getElementById(`note-input-${blocks[index - 1].id}`)?.focus(), 0);
+  //           }
+  //       }
+  //     }
+  //     else if (e.key === 'Tab') {
+  //       e.preventDefault();
+  //       const newLevel = e.shiftKey ? Math.max(0, blocks[index].level - 1) : Math.min(4, blocks[index].level + 1);
+  //       updateBlock(id, { level: newLevel });
+  //     }
+  //   };
+
+  //   const addBlock = (type) => {
+  //       const newId = Date.now();
+  //       setBlocks(prev => [...prev, { id: newId, content: '', level: 0, type: type, checked: false }]);
+  //       setTimeout(() => document.getElementById(`note-input-${newId}`)?.focus(), 0);
+  //   };
+
+  //   return (
+  //     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', position: 'relative' }}>
+  //       <div style={{ paddingBottom: 8, borderBottom: isDark ? '1px solid #333' : '1px solid #eee', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 12, color: '#999' }}>
+  //         <span>Markdown 笔记</span>
+  //         <span>{blocks.length} 行</span>
+  //       </div>
+        
+  //       <div style={{ flex: 1, overflowY: 'auto', paddingRight: 4, paddingBottom: 40 }}>
+  //         {blocks.map((block, index) => (
+  //           <div key={block.id} style={{ 
+  //             display: 'flex', 
+  //             alignItems: 'center', // 垂直居中
+  //             marginTop: 4, marginBottom: 4,
+  //             paddingLeft: `${block.level * 24}px`, // 仅保留缩进
+  //             opacity: block.checked ? 0.5 : 1,
+  //             transition: 'all 0.2s',
+  //             position: 'relative',
+  //             // 鼠标悬停显示删除按钮的容器逻辑
+  //             ':hover .delete-btn': { opacity: 1 } 
+  //           }}
+  //           className="group-notepad-row" // 给个类名方便可能的CSS扩展
+  //           >
+  //             {/* === 左侧区域：只有 todo 类型才显示复选框，其他类型完全空白 === */}
+  //             {block.type === 'todo' && (
+  //                 <div style={{ marginRight: 8, display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+  //                     <Checkbox 
+  //                         checked={block.checked} 
+  //                         onChange={(e) => updateBlock(block.id, { checked: e.target.checked })} 
+  //                     />
+  //                 </div>
+  //             )}
+
+  //             {/* === 输入框 === */}
+  //             <Input
+  //               id={`note-input-${block.id}`}
+  //               value={block.content}
+  //               onChange={(e) => handleInputChange(e, block.id, block.type)}
+  //               onKeyDown={(e) => handleKeyDown(e, index, block.id, block.type)}
+  //               placeholder="输入..."
+  //               bordered={false}
+  //               style={{ 
+  //                 padding: '2px 0', // 减小内边距，更像文本编辑器
+  //                 color: isDark ? '#ddd' : '#333',
+  //                 textDecoration: block.checked ? 'line-through' : 'none',
+  //                 // 字体大小和粗细控制
+  //                 fontWeight: block.type === 'h1' ? 700 : (block.type === 'h2' ? 600 : 400), 
+  //                 fontSize: block.type === 'h1' ? 22 : (block.type === 'h2' ? 17 : 14),
+  //                 lineHeight: 1.5,
+  //               }}
+  //             />
+              
+  //             {/* 只有鼠标悬停时才显示的删除按钮 (为了保持界面极简) */}
+  //             <Button 
+  //                 type="text" size="small" 
+  //                 icon={<DeleteOutlined style={{fontSize: 12, color: isDark ? '#444' : '#ddd'}} />} 
+  //                 onClick={() => { if(blocks.length > 1) setBlocks(prev => prev.filter(b => b.id !== block.id)); }}
+  //                 style={{ marginLeft: 'auto', opacity: 0.5 }} // 默认半透明，不抢眼
+  //             />
+  //           </div>
+  //         ))}
+          
+  //         {/* 点击底部空白处添加普通文本行 */}
+  //         <div style={{ height: 100, cursor: 'text' }} onClick={() => addBlock('text')} />
+  //       </div>
+
+  //       {/* 底部浮动工具栏 */}
+  //       <div style={{ 
+  //           position: 'absolute', bottom: 0, left: 0, right: 0, 
+  //           padding: '8px 16px', 
+  //           background: isDark ? 'rgba(30,30,30,0.95)' : 'rgba(255,255,255,0.95)', 
+  //           backdropFilter: 'blur(10px)',
+  //           borderTop: isDark ? '1px solid #444' : '1px solid #eee',
+  //           display: 'flex', justifyContent: 'space-around', alignItems: 'center',
+  //           borderRadius: '0 0 16px 16px'
+  //       }}>
+  //           <Tooltip title="添加待办">
+  //             <Button type="text" icon={<CheckSquareOutlined style={{fontSize: 18}} />} onClick={() => addBlock('todo')} />
+  //           </Tooltip>
+  //           <Tooltip title="一级标题">
+  //             <Button type="text" icon={<span style={{fontSize: 18, fontWeight: 'bold'}}>H1</span>} onClick={() => addBlock('h1')} />
+  //           </Tooltip>
+  //           <Tooltip title="二级标题">
+  //             <Button type="text" icon={<span style={{fontSize: 15, fontWeight: 'bold'}}>H2</span>} onClick={() => addBlock('h2')} />
+  //           </Tooltip>
+  //           <Tooltip title="普通文本">
+  //             <Button type="text" icon={<FileTextOutlined style={{fontSize: 18}} />} onClick={() => addBlock('text')} />
+  //           </Tooltip>
+  //       </div>
+  //     </div>
+  //   );
+  // };
+  import React, { useState, useEffect } from 'react';
+  import { Input, Button, Checkbox, Tooltip } from 'antd';
+  import { DeleteOutlined, CheckSquareOutlined, FileTextOutlined } from '@ant-design/icons';
+
+  // --- 终极版: 纯净书写体验 (无圆点) + Markdown + 快捷工具栏 ---
   const GroupNotepad = ({ group, onSave, isDark }) => {
     const [blocks, setBlocks] = useState(() => {
+      // 1. 尝试从数据库加载数据
       if (group.memo_data && Array.isArray(group.memo_data) && group.memo_data.length > 0) {
         return group.memo_data.map(b => ({ ...b, type: b.type || (b.checked !== undefined ? 'todo' : 'text') }));
       }
+      // 2. 如果是新团，初始化默认内容
       const baseId = Date.now();
       return [
         { id: baseId,     content: '行程大纲', type: 'h1', level: 0, checked: false },
@@ -1266,7 +1450,7 @@ const CalendarView = ({ groups, tasks, onEditGroup, onToggleTask, onAddTask, onD
       ];
     });
 
-    // 自动保存
+    // 自动保存 (防抖: 1秒保存一次)
     useEffect(() => {
       const timer = setTimeout(() => {
         onSave(group.id, blocks);
@@ -1350,18 +1534,15 @@ const CalendarView = ({ groups, tasks, onEditGroup, onToggleTask, onAddTask, onD
           {blocks.map((block, index) => (
             <div key={block.id} style={{ 
               display: 'flex', 
-              alignItems: 'center', // 垂直居中
+              alignItems: 'center', 
               marginTop: 4, marginBottom: 4,
-              paddingLeft: `${block.level * 24}px`, // 仅保留缩进
+              paddingLeft: `${block.level * 24}px`, 
               opacity: block.checked ? 0.5 : 1,
               transition: 'all 0.2s',
               position: 'relative',
-              // 鼠标悬停显示删除按钮的容器逻辑
               ':hover .delete-btn': { opacity: 1 } 
-            }}
-            className="group-notepad-row" // 给个类名方便可能的CSS扩展
-            >
-              {/* === 左侧区域：只有 todo 类型才显示复选框，其他类型完全空白 === */}
+            }}>
+              {/* === 左侧区域：只有 todo 类型才显示复选框 === */}
               {block.type === 'todo' && (
                   <div style={{ marginRight: 8, display: 'flex', alignItems: 'center', flexShrink: 0 }}>
                       <Checkbox 
@@ -1380,22 +1561,20 @@ const CalendarView = ({ groups, tasks, onEditGroup, onToggleTask, onAddTask, onD
                 placeholder="输入..."
                 bordered={false}
                 style={{ 
-                  padding: '2px 0', // 减小内边距，更像文本编辑器
+                  padding: '2px 0', 
                   color: isDark ? '#ddd' : '#333',
                   textDecoration: block.checked ? 'line-through' : 'none',
-                  // 字体大小和粗细控制
                   fontWeight: block.type === 'h1' ? 700 : (block.type === 'h2' ? 600 : 400), 
                   fontSize: block.type === 'h1' ? 22 : (block.type === 'h2' ? 17 : 14),
                   lineHeight: 1.5,
                 }}
               />
               
-              {/* 只有鼠标悬停时才显示的删除按钮 (为了保持界面极简) */}
               <Button 
-                  type="text" size="small" 
+                  type="text" size="small" className="delete-btn"
                   icon={<DeleteOutlined style={{fontSize: 12, color: isDark ? '#444' : '#ddd'}} />} 
                   onClick={() => { if(blocks.length > 1) setBlocks(prev => prev.filter(b => b.id !== block.id)); }}
-                  style={{ marginLeft: 'auto', opacity: 0.5 }} // 默认半透明，不抢眼
+                  style={{ marginLeft: 'auto', opacity: 0.5 }} 
               />
             </div>
           ))}
