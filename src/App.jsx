@@ -1482,43 +1482,62 @@ const CalendarView = ({ groups, tasks, onEditGroup, onToggleTask, onAddTask, onD
                           </div>
                       </div>
                       {timelineTasks.length > 0 ? (
-                          <Steps 
-                            direction="vertical" 
-                            current={-1} 
-                            items={timelineTasks.map((task, index) => {
-                                  const status = getStepStatus(task, index);
-                                  let icon = <ClockCircleOutlined />;
-                                  let subColor = '#999';
-                                  if (status === 'finish') { icon = <CheckCircleOutlined />; subColor = '#52c41a'; }
-                                  else if (status === 'error') { icon = <ExclamationCircleOutlined />; subColor = '#ff4d4f'; }
-                                  else if (status === 'process') { icon = <SyncOutlined spin />; subColor = '#1890ff'; }
-                                  
-                                  return {
-                                      status: status,
-                                      icon: (
-                                          <div onClick={(e) => { e.stopPropagation(); onToggleTask(task.id, task.done); }} style={{ cursor: 'pointer', fontSize: 22, background: isDark ? '#000' : '#fff', borderRadius: '50%', zIndex: 2 }}>
-                                              {icon}
-                                          </div>
-                                      ),
-                                      title: (
-                                          <div onClick={() => onEdit(task)} style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column', width: '100%', opacity: status === 'finish' ? 0.5 : 1 }}>
-                                              <div style={{display:'flex', alignItems:'center', gap: 8}}>
-                                                  <span style={{ color: isDark ? '#fff' : '#000', fontSize: 16, fontWeight: 500, textDecoration: status === 'finish' ? 'line-through' : 'none' }}>{task.content}</span>
-                                              </div>
-                                              <div style={{fontSize: 12, marginTop: 4, color: subColor}}>
-                                                  <Tag bordered={false} style={{color: subColor, padding: 0}}>{task.deadline}</Tag>
-                                              </div>
-                                          </div>
-                                      ),
-                                      // 3. 【修改】这里插入我们的备注框
-                                      description: (
-                                          <div style={{marginTop: 4}}>
-                                              <TaskNoteInput task={task} onSave={handleSaveTaskNote} isDark={isDark} />
-                                          </div>
-                                      )
-                                  }
-                              })}
-                          />
+                            <Steps 
+                                direction="vertical" 
+                                current={-1} 
+                                items={timelineTasks.map((task, index) => {
+                                    const status = getStepStatus(task, index);
+                                    
+                                    // 1. 获取当前任务的优先级配置 (用于拿到颜色和文字)
+                                    const priorityCfg = PRIORITY_CONFIG[task.category] || PRIORITY_CONFIG.reminder;
+
+                                    let icon = <ClockCircleOutlined />;
+                                    let subColor = '#999';
+                                    if (status === 'finish') { icon = <CheckCircleOutlined />; subColor = '#52c41a'; }
+                                    else if (status === 'error') { icon = <ExclamationCircleOutlined />; subColor = '#ff4d4f'; }
+                                    else if (status === 'process') { icon = <SyncOutlined spin />; subColor = '#1890ff'; }
+                                    
+                                    return {
+                                        status: status,
+                                        icon: (
+                                            <div onClick={(e) => { e.stopPropagation(); onToggleTask(task.id, task.done); }} style={{ cursor: 'pointer', fontSize: 22, background: isDark ? '#000' : '#fff', borderRadius: '50%', zIndex: 2 }}>
+                                                {icon}
+                                            </div>
+                                        ),
+                                        title: (
+                                            <div onClick={() => onEdit(task)} style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column', width: '100%', opacity: status === 'finish' ? 0.5 : 1 }}>
+                                                <div style={{display:'flex', alignItems:'center', gap: 8}}>
+                                                    <span style={{ color: isDark ? '#fff' : '#000', fontSize: 16, fontWeight: 500, textDecoration: status === 'finish' ? 'line-through' : 'none' }}>{task.content}</span>
+                                                </div>
+                                            </div>
+                                        ),
+                                        description: (
+                                            <div style={{marginTop: 4}}>
+                                                {/* ✨✨✨ 新增：优先级标签 + 日期显示区域 ✨✨✨ */}
+                                                <div style={{display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4}}>
+                                                    
+                                                    {/* 1. 显示优先级标签 (使用配置好的颜色) */}
+                                                    <Tag 
+                                                        color={priorityCfg.color} 
+                                                        bordered={false} 
+                                                        style={{ margin: 0, padding: '0 6px', fontSize: 11, borderRadius: 4 }}
+                                                    >
+                                                        {priorityCfg.icon} {priorityCfg.label}
+                                                    </Tag>
+
+                                                    {/* 2. 显示日期 */}
+                                                    <div style={{fontSize: 12, color: subColor}}>
+                                                        {task.deadline}
+                                                    </div>
+                                                </div>
+
+                                                {/* 3. 备注输入框 (保持不变) */}
+                                                <TaskNoteInput task={task} onSave={handleSaveTaskNote} isDark={isDark} />
+                                            </div>
+                                        )
+                                    }
+                                })}
+                            />
                       ) : <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={<span style={{color: '#999'}}>暂无时间节点</span>} />}
 
                   </Col>
