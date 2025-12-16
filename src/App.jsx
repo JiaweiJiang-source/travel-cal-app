@@ -1270,39 +1270,44 @@ const CalendarView = ({ groups, tasks, onEditGroup, onToggleTask, onAddTask, onD
     // --- 数据筛选逻辑 ---
     // --- 数据筛选与排序逻辑 (修改版) ---
     // --- 数据筛选与排序逻辑 (最终修正版) ---
+    // --- 数据筛选与排序逻辑 (自动下沉版) ---
     const { timelineTasks, memoTasks } = useMemo(() => {
         if (!activeGroupId) return { timelineTasks: [], memoTasks: [] };
         
         const groupTasks = tasks.filter(t => t.linkedInfo?.groupId === activeGroupId);
 
-        // 1. 右侧栏 (memoTasks): 永远只显示“无日期”的任务，保持不变
+        // 1. 右侧栏 (memoTasks): 永远只显示“无日期”且“未完成”的任务
+        // (注：如果你想让右侧已完成的任务也沉底，可以用同样的 sort 逻辑；
+        // 但通常备忘录里做完的可以直接看心情删掉或沉底，这里保持原样)
         const memo = groupTasks
             .filter(t => !t.deadline) 
             .sort((a, b) => Number(a.done) - Number(b.done)); 
 
-        // 2. 左侧栏 (timelineTasks): 根据模式决定显示什么
+        // 2. 左侧栏 (timelineTasks)
         let timeline = [];
 
         if (isSortByPriority) {
-            // === 模式 A: 优先级排序 (显示“全部任务”) ===
-            // 包含：有日期的 + 没日期的 (让重要但没日期的任务也能排在前面)
+            // === 模式 A: 智能优先级排序 (显示“全部任务”) ===
             timeline = [...groupTasks]; 
 
             timeline.sort((a, b) => {
-                // 规则1: 未完成在前
+                // ✅ 规则 1 (核心): 完成状态
+                // 没做完(0) - 做完(1) = 负数 -> 没做完的排前面
+                // 做完(1) - 没做完(0) = 正数 -> 做完的排后面 (即“下沉”)
                 if (a.done !== b.done) return Number(a.done) - Number(b.done);
 
-                // 规则2: 优先级 (马上做 > 重要 > ...)
+                // ✅ 规则 2: 优先级权重 (马上做 > 重要 > 提醒 ...)
+                // 只有当两个任务都“没做完”或者都“做完了”，才会比较优先级
                 const weightA = PRIORITY_WEIGHT[a.category] ?? 99;
                 const weightB = PRIORITY_WEIGHT[b.category] ?? 99;
                 if (weightA !== weightB) return weightA - weightB;
 
-                // 规则3: 有日期的排在前面 (同优先级下，有死线的更急)
+                // ✅ 规则 3: 有无日期 (有死线的更急)
                 const hasDateA = a.deadline ? 1 : 0;
                 const hasDateB = b.deadline ? 1 : 0;
                 if (hasDateA !== hasDateB) return hasDateB - hasDateA; 
 
-                // 规则4: 都有日期按日期，都没日期按创建时间
+                // ✅ 规则 4: 都有日期按日期，都没日期按ID
                 if (a.deadline && b.deadline) {
                     return dayjs(a.deadline).valueOf() - dayjs(b.deadline).valueOf();
                 }
@@ -1310,15 +1315,16 @@ const CalendarView = ({ groups, tasks, onEditGroup, onToggleTask, onAddTask, onD
             });
 
         } else {
-            // === 模式 B: 纯日期排序 (只显示“有日期任务”) ===
-            // 保持原本的逻辑，只看时间轴
+            // === 模式 B: 纯日期时间轴排序 (保留原样，不改动) ===
+            // 这里只显示有日期的，并且严格按时间排，不管有没有做完
+            // 这样你可以清楚地看到“哪天发生了什么”，即使那件事已经做完了
             timeline = groupTasks
                 .filter(t => t.deadline)
                 .sort((a, b) => dayjs(a.deadline).valueOf() - dayjs(b.deadline).valueOf());
         }
 
         return { timelineTasks: timeline, memoTasks: memo };
-    }, [activeGroupId, tasks, isSortByPriority]);
+    }, [activeGroupId, tasks, isSortByPriority]); // 依赖项保持不变
   
     const getStepStatus = (task, index) => {
       if (task.done) return 'finish';
