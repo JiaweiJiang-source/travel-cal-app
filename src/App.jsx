@@ -1280,8 +1280,20 @@ const CalendarView = ({ groups, tasks, onEditGroup, onToggleTask, onAddTask, onD
         // (注：如果你想让右侧已完成的任务也沉底，可以用同样的 sort 逻辑；
         // 但通常备忘录里做完的可以直接看心情删掉或沉底，这里保持原样)
         const memo = groupTasks
-            .filter(t => !t.deadline) 
-            .sort((a, b) => Number(a.done) - Number(b.done)); 
+        .filter(t => !t.deadline) 
+        .sort((a, b) => {
+            // 规则 1: 完成状态 (未完成在前，已完成沉底)
+            if (a.done !== b.done) return Number(a.done) - Number(b.done);
+
+            // 规则 2: 优先级权重 (马上做 > 重要 > 提醒 ...)
+            // 只有当两个任务都“没做完”时，才需要比拼优先级
+            const weightA = PRIORITY_WEIGHT[a.category] ?? 99;
+            const weightB = PRIORITY_WEIGHT[b.category] ?? 99;
+            if (weightA !== weightB) return weightA - weightB;
+
+            // 规则 3: 如果优先级也一样，按创建时间倒序 (后创建的在前面)
+            return b.id - a.id;
+        });
 
         // 2. 左侧栏 (timelineTasks)
         let timeline = [];
