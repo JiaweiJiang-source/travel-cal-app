@@ -1269,48 +1269,56 @@ const CalendarView = ({ groups, tasks, onEditGroup, onToggleTask, onAddTask, onD
 
     // --- 数据筛选逻辑 ---
     // --- 数据筛选与排序逻辑 (修改版) ---
+    // --- 数据筛选与排序逻辑 (最终修正版) ---
     const { timelineTasks, memoTasks } = useMemo(() => {
         if (!activeGroupId) return { timelineTasks: [], memoTasks: [] };
         
         const groupTasks = tasks.filter(t => t.linkedInfo?.groupId === activeGroupId);
-        
-        // 1. 获取带有截止日期的任务 (左侧栏)
-        let timeline = groupTasks.filter(t => t.deadline);
 
-        // ✨ 核心修改：根据模式进行排序
-        timeline.sort((a, b) => {
-            if (isSortByPriority) {
-                // === 模式 A: 智能排序 (完成沉底 > 优先级 > 日期) ===
-                
-                // 1. 完成状态: 未完成(0) 在前，已完成(1) 在后
-                if (a.done !== b.done) {
-                    return Number(a.done) - Number(b.done);
-                }
-
-                // 2. 优先级: 权重小的在前
-                const weightA = PRIORITY_WEIGHT[a.category] ?? 99;
-                const weightB = PRIORITY_WEIGHT[b.category] ?? 99;
-                if (weightA !== weightB) {
-                    return weightA - weightB;
-                }
-
-                // 3. 如果优先级相同，依然按日期先后排
-                return dayjs(a.deadline).valueOf() - dayjs(b.deadline).valueOf();
-
-            } else {
-                // === 模式 B: 纯日期排序 (保留你原本的逻辑) ===
-                // 纯粹按时间轴，不管有没有做完，适合看“行程流水”
-                return dayjs(a.deadline).valueOf() - dayjs(b.deadline).valueOf();
-            }
-        });
-
-        // 2. 获取无截止日期的任务 (右侧栏 - 保持不变)
+        // 1. 右侧栏 (memoTasks): 永远只显示“无日期”的任务，保持不变
         const memo = groupTasks
             .filter(t => !t.deadline) 
             .sort((a, b) => Number(a.done) - Number(b.done)); 
 
+        // 2. 左侧栏 (timelineTasks): 根据模式决定显示什么
+        let timeline = [];
+
+        if (isSortByPriority) {
+            // === 模式 A: 优先级排序 (显示“全部任务”) ===
+            // 包含：有日期的 + 没日期的 (让重要但没日期的任务也能排在前面)
+            timeline = [...groupTasks]; 
+
+            timeline.sort((a, b) => {
+                // 规则1: 未完成在前
+                if (a.done !== b.done) return Number(a.done) - Number(b.done);
+
+                // 规则2: 优先级 (马上做 > 重要 > ...)
+                const weightA = PRIORITY_WEIGHT[a.category] ?? 99;
+                const weightB = PRIORITY_WEIGHT[b.category] ?? 99;
+                if (weightA !== weightB) return weightA - weightB;
+
+                // 规则3: 有日期的排在前面 (同优先级下，有死线的更急)
+                const hasDateA = a.deadline ? 1 : 0;
+                const hasDateB = b.deadline ? 1 : 0;
+                if (hasDateA !== hasDateB) return hasDateB - hasDateA; 
+
+                // 规则4: 都有日期按日期，都没日期按创建时间
+                if (a.deadline && b.deadline) {
+                    return dayjs(a.deadline).valueOf() - dayjs(b.deadline).valueOf();
+                }
+                return b.id - a.id;
+            });
+
+        } else {
+            // === 模式 B: 纯日期排序 (只显示“有日期任务”) ===
+            // 保持原本的逻辑，只看时间轴
+            timeline = groupTasks
+                .filter(t => t.deadline)
+                .sort((a, b) => dayjs(a.deadline).valueOf() - dayjs(b.deadline).valueOf());
+        }
+
         return { timelineTasks: timeline, memoTasks: memo };
-    }, [activeGroupId, tasks, isSortByPriority]); // 👈 注意这里加了 isSortByPriority 依赖
+    }, [activeGroupId, tasks, isSortByPriority]);
   
     const getStepStatus = (task, index) => {
       if (task.done) return 'finish';
