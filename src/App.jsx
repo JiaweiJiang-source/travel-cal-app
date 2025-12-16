@@ -1592,27 +1592,74 @@ const CalendarView = ({ groups, tasks, onEditGroup, onToggleTask, onAddTask, onD
                               
                               <div style={{flex: 1, overflowY: 'auto', background: isDark ? 'rgba(255,255,255,0.02)' : '#fafafa', borderRadius: 8, padding: 8}}>
                                   {memoTasks.length > 0 ? (
-                                      memoTasks.map(task => (
-                                          <div 
-                                              key={task.id} 
-                                              onClick={() => onEdit(task)}
-                                              style={{
-                                                  padding: '8px 10px', marginBottom: 6, background: isDark ? '#1f1f1f' : '#fff',
-                                                  borderRadius: 6, border: isDark ? '1px solid #333' : '1px solid #e8e8e8',
-                                                  cursor: 'pointer', display: 'flex', gap: 10, alignItems: 'center',
-                                                  opacity: task.done ? 0.6 : 1
-                                              }}
-                                          >
-                                              <Checkbox checked={task.done} onClick={(e) => e.stopPropagation()} onChange={() => onToggleTask(task.id, task.done)} />
-                                              <div style={{flex: 1, color: isDark ? '#ddd' : '#333', fontSize: 13, textDecoration: task.done ? 'line-through' : 'none', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis'}}>
-                                                  {task.content}
-                                              </div>
-                                              <Popconfirm title="删除" onConfirm={(e) => { e.stopPropagation(); onDelete(task.id); }} okButtonProps={{danger:true}}>
-                                                  <DeleteOutlined style={{color: '#999', fontSize: 12}} onClick={(e) => e.stopPropagation()} />
-                                              </Popconfirm>
-                                          </div>
-                                      ))
-                                  ) : <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="无" style={{margin: '10px 0'}} />}
+    memoTasks.map(task => {
+        // 1. 获取优先级配置颜色
+        const priorityCfg = PRIORITY_CONFIG[task.category] || PRIORITY_CONFIG.reminder;
+        
+        return (
+            <div 
+                key={task.id} 
+                onClick={() => onEdit(task)}
+                style={{
+                    padding: '8px 10px', 
+                    marginBottom: 6, 
+                    background: isDark ? '#1f1f1f' : '#fff',
+                    borderRadius: 6, 
+                    border: isDark ? '1px solid #333' : '1px solid #e8e8e8',
+                    cursor: 'pointer', 
+                    display: 'flex', 
+                    gap: 10, 
+                    // ✨ 修改：改为顶部对齐，防止加了标签后复选框位置奇怪
+                    alignItems: 'flex-start', 
+                    opacity: task.done ? 0.6 : 1
+                }}
+            >
+                {/* 复选框微调 marginTop 以对齐文字首行 */}
+                <Checkbox 
+                    checked={task.done} 
+                    onClick={(e) => e.stopPropagation()} 
+                    onChange={() => onToggleTask(task.id, task.done)} 
+                    style={{ marginTop: 2 }} 
+                />
+                
+                <div style={{flex: 1, minWidth: 0}}>
+                    {/* 任务内容 */}
+                    <div style={{
+                        color: isDark ? '#ddd' : '#333', 
+                        fontSize: 13, 
+                        textDecoration: task.done ? 'line-through' : 'none', 
+                        // ✨ 修改：允许换行，防止内容太长看不到
+                        wordBreak: 'break-all',
+                        lineHeight: 1.4
+                    }}>
+                        {task.content}
+                    </div>
+                    
+                    {/* ✨✨✨ 新增：优先级标签显示区域 ✨✨✨ */}
+                    <div style={{marginTop: 4}}>
+                        <Tag 
+                            color={priorityCfg.color} 
+                            bordered={false} 
+                            style={{ 
+                                margin: 0, 
+                                padding: '0 4px', 
+                                fontSize: 10, 
+                                lineHeight: '16px',
+                                borderRadius: 3
+                            }}
+                        >
+                            {priorityCfg.label}
+                        </Tag>
+                    </div>
+                </div>
+
+                <Popconfirm title="删除" onConfirm={(e) => { e.stopPropagation(); onDelete(task.id); }} okButtonProps={{danger:true}}>
+                    <DeleteOutlined style={{color: '#999', fontSize: 12, marginTop: 4}} onClick={(e) => e.stopPropagation()} />
+                </Popconfirm>
+            </div>
+        );
+    })
+) : <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="无" style={{margin: '10px 0'}} />}
                               </div>
                           </div>
 
