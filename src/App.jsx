@@ -1015,6 +1015,18 @@ const CalendarView = ({ groups, tasks, onEditGroup, onToggleTask, onAddTask, onD
     const [quickCategory, setQuickCategory] = useState('reminder'); 
     const [quickContent, setQuickContent] = useState('');
     const [quickDate, setQuickDate] = useState(null);
+
+    // ✨ 新增：排序模式状态 (默认 true: 按优先级+完成状态排序)
+    const [isSortByPriority, setIsSortByPriority] = useState(true);
+
+    // ✨ 新增：优先级权重定义 (数值越小越靠前)
+    const PRIORITY_WEIGHT = {
+        immediate: 0, // 马上做
+        important: 1, // 重要
+        reminder: 2,  // 提醒
+        memo: 3,      // 备忘
+        imported: 4   // 外部导入
+    };
     
     // --- 新增：拖拽调整高度相关 State 和 Ref ---
     const [topHeightPercent, setTopHeightPercent] = useState(50); // 默认 50%
@@ -1256,20 +1268,49 @@ const CalendarView = ({ groups, tasks, onEditGroup, onToggleTask, onAddTask, onD
     };
 
     // --- 数据筛选逻辑 ---
+    // --- 数据筛选与排序逻辑 (修改版) ---
     const { timelineTasks, memoTasks } = useMemo(() => {
         if (!activeGroupId) return { timelineTasks: [], memoTasks: [] };
+        
         const groupTasks = tasks.filter(t => t.linkedInfo?.groupId === activeGroupId);
         
-        const timeline = groupTasks
-            .filter(t => t.deadline) 
-            .sort((a, b) => dayjs(a.deadline).valueOf() - dayjs(b.deadline).valueOf());
-            
+        // 1. 获取带有截止日期的任务 (左侧栏)
+        let timeline = groupTasks.filter(t => t.deadline);
+
+        // ✨ 核心修改：根据模式进行排序
+        timeline.sort((a, b) => {
+            if (isSortByPriority) {
+                // === 模式 A: 智能排序 (完成沉底 > 优先级 > 日期) ===
+                
+                // 1. 完成状态: 未完成(0) 在前，已完成(1) 在后
+                if (a.done !== b.done) {
+                    return Number(a.done) - Number(b.done);
+                }
+
+                // 2. 优先级: 权重小的在前
+                const weightA = PRIORITY_WEIGHT[a.category] ?? 99;
+                const weightB = PRIORITY_WEIGHT[b.category] ?? 99;
+                if (weightA !== weightB) {
+                    return weightA - weightB;
+                }
+
+                // 3. 如果优先级相同，依然按日期先后排
+                return dayjs(a.deadline).valueOf() - dayjs(b.deadline).valueOf();
+
+            } else {
+                // === 模式 B: 纯日期排序 (保留你原本的逻辑) ===
+                // 纯粹按时间轴，不管有没有做完，适合看“行程流水”
+                return dayjs(a.deadline).valueOf() - dayjs(b.deadline).valueOf();
+            }
+        });
+
+        // 2. 获取无截止日期的任务 (右侧栏 - 保持不变)
         const memo = groupTasks
             .filter(t => !t.deadline) 
             .sort((a, b) => Number(a.done) - Number(b.done)); 
 
         return { timelineTasks: timeline, memoTasks: memo };
-    }, [activeGroupId, tasks]);
+    }, [activeGroupId, tasks, isSortByPriority]); // 👈 注意这里加了 isSortByPriority 依赖
   
     const getStepStatus = (task, index) => {
       if (task.done) return 'finish';
@@ -1402,21 +1443,43 @@ const CalendarView = ({ groups, tasks, onEditGroup, onToggleTask, onAddTask, onD
                   
                   {/* === 左侧：时间轴 (固定) === */}
                   <Col xs={24} md={12} style={{height: '100%', overflowY: 'auto', paddingRight: 12, borderRight: isMobile ? 'none' : (isDark ? '1px solid #333' : '1px solid #f0f0f0')}}>
-                      {/* ✅ Step 3: 修改这里的标题栏，加入导入按钮 */}
+                      
+                      {/* 标题栏 */}
                       <div style={{marginBottom: 16, display:'flex', alignItems:'center', justifyContent: 'space-between'}}>
                           <div style={{fontWeight: 'bold', color: isDark ? '#fff' : '#333', display:'flex', alignItems:'center', gap: 8}}>
-                              <ClockCircleOutlined /> 关键节点进度 ({timelineTasks.length})
+                              <ClockCircleOutlined /> 
+                              {/* 动态显示当前标题，提示用户 */}
+                              {isSortByPriority ? '智能排序 (优先级)' : '时间轴视图'} 
+                              ({timelineTasks.length})
                           </div>
-                          <Tooltip title="批量导入 (格式: 事件, 2025-12-01)">
-                              <Button 
-                                type="dashed" 
-                                size="small" 
-                                icon={<ImportOutlined />} 
-                                onClick={() => setIsImportModalOpen(true)}
-                              >
-                                  导入
-                              </Button>
-                          </Tooltip>
+                          
+                          <div style={{display: 'flex', gap: 8}}>
+                              {/* ✨ 新增：切换排序按钮 */}
+                              <Tooltip title={isSortByPriority ? "切换为：纯日期时间轴" : "切换为：优先级排序 (已完成沉底)"}>
+                                  <Button 
+                                    size="small" 
+                                    // 根据状态改变图标或样式
+                                    type={isSortByPriority ? "primary" : "default"} 
+                                    ghost={isSortByPriority}
+                                    icon={isSortByPriority ? <FireOutlined /> : <CalendarOutlined />} 
+                                    onClick={() => setIsSortByPriority(!isSortByPriority)}
+                                  >
+                                      {isSortByPriority ? "按优先级" : "按日期"}
+                                  </Button>
+                              </Tooltip>
+
+                              {/* 原有的导入按钮 */}
+                              <Tooltip title="批量导入 (格式: 事件, 2025-12-01)">
+                                  <Button 
+                                    type="dashed" 
+                                    size="small" 
+                                    icon={<ImportOutlined />} 
+                                    onClick={() => setIsImportModalOpen(true)}
+                                  >
+                                      导入
+                                  </Button>
+                              </Tooltip>
+                          </div>
                       </div>
                       {timelineTasks.length > 0 ? (
                           <Steps 
